@@ -28,7 +28,7 @@ jobs:
                   python-version: "3.11"
 
             # ==========================================
-            # DOWNLOAD COVERAGE ARTIFACTS (V3)
+            # DOWNLOAD COVERAGE ARTIFACTS
             # ==========================================
             - name: Download Android Coverage
               uses: dawidd6/action-download-artifact@v3
@@ -64,21 +64,20 @@ jobs:
                   search_artifacts: true
 
             # ==========================================
-            # PATH CORRECTION (Safe Implementation)
+            # PATH CORRECTION (Python Only)
             # ==========================================
-            - name: Fix Coverage XML Paths
+            - name: Fix Python Coverage Paths
               run: |
-                  echo "Correcting ML coverage paths..."
                   ML_XML="BinItRightML/coverage.xml"
                   if [ -f "$ML_XML" ]; then
+                    # Redirects Python's absolute source root to the submodule folder
                     sed -i 's|<source>.*</source>|<source>BinItRightML</source>|g' "$ML_XML"
                     echo "✅ ML report patched."
                   fi
-
-                  echo "Skipping XML patching for Mobile and Web to maintain class signature integrity."
+                  echo "Skipping XML patching for Java/Kotlin to maintain class integrity."
 
             # ==========================================
-            # BUILD BINARIES & SCAN
+            # BUILD BINARIES & DIAGNOSTICS
             # ==========================================
             - name: Compile Java Web App
               run: |
@@ -86,6 +85,14 @@ jobs:
                   chmod +x mvnw
                   ./mvnw clean compile test-compile dependency:copy-dependencies -DskipTests
 
+                  echo "--- Verifying Web Binaries ---"
+                  ls -R target/classes/tech3/binitright/controller | head -n 10
+                  echo "--- Verifying Web Report ---"
+                  ls -l target/site/jacoco/jacoco.xml
+
+            # ==========================================
+            # SONARCLOUD ANALYSIS
+            # ==========================================
             - name: Run SonarCloud Analysis
               uses: SonarSource/sonarqube-scan-action@v5.0.0
               env:
