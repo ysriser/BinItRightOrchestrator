@@ -84,6 +84,12 @@ jobs:
                   echo "Checking Mobile App Submodule Path:"
                   ls -R BinItRightMobileApp/app/src/test || echo "❌ Path not found!"
 
+            - name: Compile Java Web App
+              run: |
+                  cd BinItRightWebApp
+                  chmod +x mvnw
+                  ./mvnw clean compile -DskipTests
+
             - name: Run SonarCloud Analysis
               uses: SonarSource/sonarcloud-github-action@master
               env:
