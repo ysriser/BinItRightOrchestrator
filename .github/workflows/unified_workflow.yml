@@ -9,10 +9,7 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-            # ==========================================
-            # SETUP
-            # ==========================================
-            - name: Checkout Parent Repo with Submodules
+            - name: Checkout Parent Repo
               uses: actions/checkout@v4
               with:
                   submodules: recursive
@@ -31,7 +28,7 @@ jobs:
                   python-version: "3.11"
 
             # ==========================================
-            # DOWNLOAD COVERAGE ARTIFACTS (V3)
+            # DOWNLOAD COVERAGE ARTIFACTS
             # ==========================================
             - name: Download Android Coverage
               uses: dawidd6/action-download-artifact@v3
@@ -44,10 +41,6 @@ jobs:
                   path: BinItRightMobileApp/app/build/reports/jacoco
                   search_artifacts: true
                   check_artifacts: true
-                  if_no_artifact_found: warn
-
-            - name: API Cooldown
-              run: sleep 5
 
             - name: Download Java Coverage
               uses: dawidd6/action-download-artifact@v3
@@ -60,10 +53,6 @@ jobs:
                   path: BinItRightWebApp/target/site/jacoco
                   search_artifacts: true
                   check_artifacts: true
-                  if_no_artifact_found: warn
-
-            - name: API Cooldown
-              run: sleep 5
 
             - name: Download Python Coverage
               uses: dawidd6/action-download-artifact@v3
@@ -76,29 +65,36 @@ jobs:
                   path: BinItRightML
                   search_artifacts: true
                   check_artifacts: true
-                  if_no_artifact_found: warn
 
             # ==========================================
-            # BUILD BINARIES (Required for JaCoCo)
+            # PATH CORRECTION (The Fix for 0% / Low Coverage)
             # ==========================================
-            - name: Compile Java Web App & Export Libraries
+            - name: Fix Coverage XML Paths
+              run: |
+                  echo "Patching XML reports to match Orchestrator structure..."
+
+                  # Fix Mobile Paths: Change 'app/src' to 'BinItRightMobileApp/app/src'
+                  ANDROID_XML="BinItRightMobileApp/app/build/reports/jacoco/jacoco/jacocoTestReport/jacocoTestReport.xml"
+                  if [ -f "$ANDROID_XML" ]; then
+                    sed -i 's|app/src/main/java|BinItRightMobileApp/app/src/main/java|g' "$ANDROID_XML"
+                  fi
+
+                  # Fix Web Paths: Change 'src/main' to 'BinItRightWebApp/src/main'
+                  WEB_XML="BinItRightWebApp/target/site/jacoco/jacoco.xml"
+                  if [ -f "$WEB_XML" ]; then
+                    sed -i 's|src/main/java|BinItRightWebApp/src/main/java|g' "$WEB_XML"
+                  fi
+
+            # ==========================================
+            # BUILD BINARIES
+            # ==========================================
+            - name: Compile Java Web App
               run: |
                   if [ -d "BinItRightWebApp" ]; then
                      cd BinItRightWebApp
                      chmod +x mvnw
                      ./mvnw clean compile test-compile dependency:copy-dependencies -DskipTests
                   fi
-
-            # ==========================================
-            # DEBUG: CONFIRM REPORTS EXIST BEFORE SCAN
-            # ==========================================
-            - name: Verify Reports Exist
-              run: |
-                  echo "--- Checking filesystem for XML reports ---"
-                  find . -name "jacoco.xml"
-                  find . -name "jacocoTestReport.xml"
-                  find . -name "coverage.xml"
-                  echo "------------------------------------------"
 
             # ==========================================
             # SONARCLOUD ANALYSIS
