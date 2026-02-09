@@ -79,14 +79,14 @@ jobs:
                   # Fix Mobile Paths: Adds 'BinItRightMobileApp/' prefix to source paths
                   ANDROID_XML="BinItRightMobileApp/app/build/reports/jacoco/jacoco/jacocoTestReport/jacocoTestReport.xml"
                   if [ -f "$ANDROID_XML" ]; then
-                    sed -i 's|app/src/main/java|BinItRightMobileApp/app/src/main/java|g' "$ANDROID_XML"
+                    sed -i 's|iss/nus/edu/sg|BinItRightMobileApp/app/src/main/java/iss/nus/edu/sg|g' "$ANDROID_XML"
                     echo "✅ Mobile report patched."
                   fi
 
-                  # Fix Web Paths: Adds 'BinItRightWebApp/' prefix to source paths
+                  # Fix Web Paths: Specifically targets your tech3.binitright package structure
                   WEB_XML="BinItRightWebApp/target/site/jacoco/jacoco.xml"
                   if [ -f "$WEB_XML" ]; then
-                    sed -i 's|src/main/java|BinItRightWebApp/src/main/java|g' "$WEB_XML"
+                    sed -i 's|tech3/binitright|BinItRightWebApp/src/main/java/tech3/binitright|g' "$WEB_XML"
                     echo "✅ Web report patched."
                   fi
 
