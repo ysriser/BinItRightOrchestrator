@@ -31,43 +31,40 @@ jobs:
                   python-version: "3.11"
 
             # ==========================================
-            # DOWNLOAD COVERAGE ARTIFACTS
+            # DOWNLOAD COVERAGE ARTIFACTS (Throttling Fix)
             # ==========================================
             - name: Download Android Coverage
-              uses: dawidd6/action-download-artifact@v3
+              uses: actions/download-artifact@v4
               continue-on-error: true
               with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: android_cicd.yml
-                  repo: ysriser/BinItRightMobileApp
                   name: android-coverage-reports
                   path: BinItRightMobileApp/app/build/reports/jacoco
-                  search_artifacts: true
-                  if_no_artifact_found: warn
+                  repository: ysriser/BinItRightMobileApp
+                  github-token: ${{ secrets.GH_PAT }}
+
+            - name: Wait for API cooldown
+              run: sleep 5
 
             - name: Download Java Coverage
-              uses: dawidd6/action-download-artifact@v3
+              uses: actions/download-artifact@v4
               continue-on-error: true
               with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: pr_validation.yml
-                  repo: ysriser/BinItRightWebApp
                   name: java-coverage-reports
                   path: BinItRightWebApp/target/site/jacoco
-                  search_artifacts: true
-                  if_no_artifact_found: warn
+                  repository: ysriser/BinItRightWebApp
+                  github-token: ${{ secrets.GH_PAT }}
+
+            - name: Wait for API cooldown
+              run: sleep 5
 
             - name: Download Python Coverage
-              uses: dawidd6/action-download-artifact@v3
+              uses: actions/download-artifact@v4
               continue-on-error: true
               with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: pr_validation.yml
-                  repo: ysriser/BinItRightML
                   name: python-coverage-reports
                   path: BinItRightML
-                  search_artifacts: true
-                  if_no_artifact_found: warn
+                  repository: ysriser/BinItRightML
+                  github-token: ${{ secrets.GH_PAT }}
 
             # ==========================================
             # SONARCLOUD ANALYSIS
@@ -87,12 +84,12 @@ jobs:
             - name: Compile Java Web App
               run: |
                   if [ -d "BinItRightWebApp" ]; then
-                  cd BinItRightWebApp
-                  chmod +x mvnw
-                  ./mvnw clean compile -DskipTests
+                     cd BinItRightWebApp
+                     chmod +x mvnw
+                     ./mvnw clean compile test-compile dependency:copy-dependencies -DskipTests
                   else
-                  echo "❌ BinItRightWebApp directory not found!"
-                  exit 1
+                     echo "❌ BinItRightWebApp directory not found!"
+                     exit 1
                   fi
 
             - name: Run SonarCloud Analysis
