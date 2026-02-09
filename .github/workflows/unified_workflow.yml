@@ -9,6 +9,9 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
+            # ==========================================
+            # SETUP
+            # ==========================================
             - name: Checkout Parent Repo with Submodules
               uses: actions/checkout@v4
               with:
@@ -84,10 +87,18 @@ jobs:
                      cd BinItRightWebApp
                      chmod +x mvnw
                      ./mvnw clean compile test-compile dependency:copy-dependencies -DskipTests
-                  else
-                     echo "❌ BinItRightWebApp directory not found!"
-                     exit 1
                   fi
+
+            # ==========================================
+            # DEBUG: CONFIRM REPORTS EXIST BEFORE SCAN
+            # ==========================================
+            - name: Verify Reports Exist
+              run: |
+                  echo "--- Checking filesystem for XML reports ---"
+                  find . -name "jacoco.xml"
+                  find . -name "jacocoTestReport.xml"
+                  find . -name "coverage.xml"
+                  echo "------------------------------------------"
 
             # ==========================================
             # SONARCLOUD ANALYSIS
