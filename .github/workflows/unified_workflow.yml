@@ -71,18 +71,29 @@ jobs:
             # ==========================================
             - name: Fix Coverage XML Paths
               run: |
-                  echo "Patching XML reports to match Orchestrator structure..."
+                  echo "Applying final path patches..."
 
-                  # Fix Mobile Paths: Change 'app/src' to 'BinItRightMobileApp/app/src'
-                  ANDROID_XML="BinItRightMobileApp/app/build/reports/jacoco/jacoco/jacocoTestReport/jacocoTestReport.xml"
-                  if [ -f "$ANDROID_XML" ]; then
-                    sed -i 's|app/src/main/java|BinItRightMobileApp/app/src/main/java|g' "$ANDROID_XML"
-                  fi
-
-                  # Fix Web Paths: Change 'src/main' to 'BinItRightWebApp/src/main'
+                  # WEB FIX: Matches the path shown in your screenshot
                   WEB_XML="BinItRightWebApp/target/site/jacoco/jacoco.xml"
                   if [ -f "$WEB_XML" ]; then
+                    # This ensures internal paths start with the module folder name
                     sed -i 's|src/main/java|BinItRightWebApp/src/main/java|g' "$WEB_XML"
+                    echo "✅ Web paths patched."
+                  fi
+
+                  # ML FIX: Aligning the Python coverage
+                  ML_XML="BinItRightML/coverage.xml"
+                  if [ -f "$ML_XML" ]; then
+                    # Python reports often need the <source> tag updated
+                    sed -i 's|<source>.*</source>|<source>BinItRightML</source>|g' "$ML_XML"
+                    echo "✅ ML paths patched."
+                  fi
+
+                  # MOBILE FIX: Double-checking the working one
+                  MOBILE_XML="BinItRightMobileApp/app/build/reports/jacoco/jacoco/jacocoTestReport/jacocoTestReport.xml"
+                  if [ -f "$MOBILE_XML" ]; then
+                    sed -i 's|app/src/main/java|BinItRightMobileApp/app/src/main/java|g' "$MOBILE_XML"
+                    echo "✅ Mobile paths patched."
                   fi
 
             # ==========================================
