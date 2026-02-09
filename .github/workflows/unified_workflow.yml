@@ -64,15 +64,17 @@ jobs:
                   search_artifacts: true
 
             # ==========================================
-            # PATH CORRECTION (Python Only)
+            # PATH CORRECTION (Updated for ML)
             # ==========================================
             - name: Fix Python Coverage Paths
               run: |
                   ML_XML="BinItRightML/coverage.xml"
                   if [ -f "$ML_XML" ]; then
-                    sed -i 's|<source>.*</source>|<source>BinItRightML</source>|g' "$ML_XML"
-                    echo "✅ ML report patched."
+                    # Change the source root to '.' so Sonar looks relative to the projectBaseDir
+                    sed -i 's|<source>.*</source>|<source>.</source>|g' "$ML_XML"
+                    echo "✅ ML report paths set to relative."
                   fi
+                  echo "Skipping Java/Kotlin XML patching as requested (already working)."
 
             # ==========================================
             # COMPILE & DIAGNOSTICS
