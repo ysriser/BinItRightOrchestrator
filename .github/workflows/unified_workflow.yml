@@ -53,7 +53,7 @@ jobs:
                   workflow: pr_validation.yml
                   repo: ysriser/BinItRightWebApp
                   name: java-coverage-reports
-                  path: submodules/BinItRightWebApp/target/site/jacoco
+                  path: BinItRightWebApp/target/site/jacoco
                   search_artifacts: true
                   if_no_artifact_found: warn
 
@@ -65,7 +65,7 @@ jobs:
                   workflow: pr_validation.yml
                   repo: ysriser/BinItRightML
                   name: python-coverage-reports
-                  path: submodules/BinItRightML
+                  path: BinItRightML
                   search_artifacts: true
                   if_no_artifact_found: warn
 
@@ -86,9 +86,14 @@ jobs:
 
             - name: Compile Java Web App
               run: |
+                  if [ -d "BinItRightWebApp" ]; then
                   cd BinItRightWebApp
                   chmod +x mvnw
                   ./mvnw clean compile -DskipTests
+                  else
+                  echo "❌ BinItRightWebApp directory not found!"
+                  exit 1
+                  fi
 
             - name: Run SonarCloud Analysis
               uses: SonarSource/sonarcloud-github-action@master
