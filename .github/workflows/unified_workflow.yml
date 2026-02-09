@@ -70,30 +70,6 @@ jobs:
                   if_no_artifact_found: warn
 
             # ==========================================
-            # DEBUG & VERIFICATION
-            # ==========================================
-            - name: Verify Coverage Files
-              run: |
-                  echo "========================================="
-                  echo "🔍 Searching for Coverage Reports"
-                  echo "========================================="
-
-                  echo ""
-                  echo "📱 Android Coverage:"
-                  find BinItRightMobileApp -name "jacocoTestReport.xml" -o -name "lint-results*.xml" | head -5 || echo "  ❌ No Android coverage found"
-
-                  echo ""
-                  echo "☕ Java Coverage:"
-                  find submodules/BinItRightWebApp -name "jacoco.xml" | head -5 || echo "  ❌ No Java coverage found"
-
-                  echo ""
-                  echo "🐍 Python Coverage:"
-                  find submodules/BinItRightML -name "coverage.xml" | head -5 || echo "  ❌ No Python coverage found"
-
-                  echo ""
-                  echo "========================================="
-
-            # ==========================================
             # SONARCLOUD ANALYSIS
             # ==========================================
             - name: Cache SonarCloud Packages
@@ -106,7 +82,7 @@ jobs:
             - name: List Submodule Files (Debug)
               run: |
                   echo "Checking Mobile App Submodule Path:"
-                  ls -R submodules/BinItRightMobileApp/app/src/test || echo "❌ Path not found!"
+                  ls -R BinItRightMobileApp/app/src/test || echo "❌ Path not found!"
 
             - name: Run SonarCloud Analysis
               uses: SonarSource/sonarcloud-github-action@master
