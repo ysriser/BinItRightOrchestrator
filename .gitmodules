@@ -1,0 +1,9 @@
+[submodule "BinItRightWebApp"]
+	path = BinItRightWebApp
+	url = https://github.com/ysriser/BinItRightWebApp.git
+[submodule "BinItRightML"]
+	path = BinItRightML
+	url = https://github.com/ysriser/BinItRightML.git
+[submodule "BinItRightMobileApp"]
+	path = BinItRightMobileApp
+	url = https://github.com/ysriser/BinItRightMobileApp.git
