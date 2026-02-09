@@ -9,9 +9,6 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-            # ==========================================
-            # SETUP
-            # ==========================================
             - name: Checkout Parent Repo
               uses: actions/checkout@v4
               with:
@@ -43,7 +40,6 @@ jobs:
                   name: android-coverage-reports
                   path: BinItRightMobileApp/app/build/reports/jacoco
                   search_artifacts: true
-                  check_artifacts: true
 
             - name: Download Java Coverage
               uses: dawidd6/action-download-artifact@v3
@@ -55,7 +51,6 @@ jobs:
                   name: java-coverage-reports
                   path: BinItRightWebApp/target/site/jacoco
                   search_artifacts: true
-                  check_artifacts: true
 
             - name: Download Python Coverage
               uses: dawidd6/action-download-artifact@v3
@@ -67,30 +62,30 @@ jobs:
                   name: python-coverage-reports
                   path: BinItRightML
                   search_artifacts: true
-                  check_artifacts: true
 
             # ==========================================
-            # PATH CORRECTION (The Fix for 0% Coverage)
+            # PATH CORRECTION & VERIFICATION
             # ==========================================
             - name: Fix Coverage XML Paths
               run: |
-                  echo "Patching XML reports to match Orchestrator structure..."
+                  echo "Patching XML reports..."
 
-                  # Fix Mobile Paths: Adds 'BinItRightMobileApp/' prefix to source paths
+                  # WEB FIX: Matches the tech3/binitright package in your uploaded XML
+                  WEB_XML="BinItRightWebApp/target/site/jacoco/jacoco.xml"
+                  if [ -f "$WEB_XML" ]; then
+                    sed -i 's|name="tech3/binitright|name="BinItRightWebApp/src/main/java/tech3/binitright|g' "$WEB_XML"
+                    echo "✅ Web report patched. Previewing first class entry:"
+                    grep -m 1 "class name=" "$WEB_XML"
+                  fi
+
+                  # MOBILE FIX: Matches iss/nus/edu/sg package
                   ANDROID_XML="BinItRightMobileApp/app/build/reports/jacoco/jacoco/jacocoTestReport/jacocoTestReport.xml"
                   if [ -f "$ANDROID_XML" ]; then
-                    sed -i 's|iss/nus/edu/sg|BinItRightMobileApp/app/src/main/java/iss/nus/edu/sg|g' "$ANDROID_XML"
+                    sed -i 's|name="iss/nus/edu/sg|name="BinItRightMobileApp/app/src/main/java/iss/nus/edu/sg|g' "$ANDROID_XML"
                     echo "✅ Mobile report patched."
                   fi
 
-                  # Fix Web Paths: Specifically targets your tech3.binitright package structure
-                  WEB_XML="BinItRightWebApp/target/site/jacoco/jacoco.xml"
-                  if [ -f "$WEB_XML" ]; then
-                    sed -i 's|tech3/binitright|BinItRightWebApp/src/main/java/tech3/binitright|g' "$WEB_XML"
-                    echo "✅ Web report patched."
-                  fi
-
-                  # Fix ML Paths: Redirects <source> tag to the submodule folder
+                  # ML FIX: Source tag redirection
                   ML_XML="BinItRightML/coverage.xml"
                   if [ -f "$ML_XML" ]; then
                     sed -i 's|<source>.*</source>|<source>BinItRightML</source>|g' "$ML_XML"
@@ -98,19 +93,14 @@ jobs:
                   fi
 
             # ==========================================
-            # BUILD BINARIES (Required for Web Module)
+            # BUILD BINARIES & SCAN
             # ==========================================
             - name: Compile Java Web App
               run: |
-                  if [ -d "BinItRightWebApp" ]; then
-                     cd BinItRightWebApp
-                     chmod +x mvnw
-                     ./mvnw clean compile test-compile dependency:copy-dependencies -DskipTests
-                  fi
+                  cd BinItRightWebApp
+                  chmod +x mvnw
+                  ./mvnw clean compile test-compile dependency:copy-dependencies -DskipTests
 
-            # ==========================================
-            # SONARCLOUD ANALYSIS
-            # ==========================================
             - name: Run SonarCloud Analysis
               uses: SonarSource/sonarqube-scan-action@v5.0.0
               env:
