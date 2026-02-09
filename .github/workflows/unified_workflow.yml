@@ -1,0 +1,56 @@
+name: "Unified Workflow Pipeline"
+
+on:
+    workflow_dispatch: # Allows you to run it manually for the professor
+
+jobs:
+    unified-scan:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Orchestrator & Submodules
+              uses: actions/checkout@v4
+              with:
+                  submodules: "recursive"
+                  fetch-depth: 0
+
+            # --- ENV SETUP ---
+            - uses: actions/setup-java@v3
+              with: { java-version: "17", distribution: "temurin" }
+            - uses: actions/setup-python@v4
+              with: { python-version: "3.10" }
+
+            # --- BUILD & GENERATE COVERAGE ---
+            - name: Build Web (Java)
+              run: |
+                  cd BinItRightWebApp
+                  chmod +x mvnw
+                  ./mvnw clean verify
+
+            - name: Build ML (Python)
+              run: |
+                  cd BinItRightML
+                  pip install -r requirements.txt
+                  pip install pytest-cov
+                  pytest --cov=. --cov-report=xml
+
+            - name: Build Mobile (Android)
+              run: |
+                  cd BinItRightMobileApp
+                  chmod +x gradlew
+                  ./gradlew testDebugUnitTest
+
+            # --- CONSOLIDATED SCA (OWASP) ---
+            - name: Unified SCA Scan
+              uses: dependency-check/Dependency-Check_Action@main
+              with:
+                  project: "BinItRight_Overall"
+                  path: "."
+                  format: "ALL"
+                  out: "reports"
+
+            # --- UNIFIED SONAR SCAN ---
+            - name: SonarCloud Scan (SAST & Code Quality)
+              uses: sonarsource/sonarcloud-github-action@master
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
