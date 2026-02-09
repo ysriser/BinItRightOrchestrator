@@ -64,33 +64,18 @@ jobs:
                   search_artifacts: true
 
             # ==========================================
-            # PATH CORRECTION & VERIFICATION
+            # PATH CORRECTION (Safe Implementation)
             # ==========================================
             - name: Fix Coverage XML Paths
               run: |
-                  echo "Patching XML reports..."
-
-                  # WEB FIX: Matches the tech3/binitright package in your uploaded XML
-                  WEB_XML="BinItRightWebApp/target/site/jacoco/jacoco.xml"
-                  if [ -f "$WEB_XML" ]; then
-                    sed -i 's|name="tech3/binitright|name="BinItRightWebApp/src/main/java/tech3/binitright|g' "$WEB_XML"
-                    echo "✅ Web report patched. Previewing first class entry:"
-                    grep -m 1 "class name=" "$WEB_XML"
-                  fi
-
-                  # MOBILE FIX: Matches iss/nus/edu/sg package
-                  ANDROID_XML="BinItRightMobileApp/app/build/reports/jacoco/jacoco/jacocoTestReport/jacocoTestReport.xml"
-                  if [ -f "$ANDROID_XML" ]; then
-                    sed -i 's|name="iss/nus/edu/sg|name="BinItRightMobileApp/app/src/main/java/iss/nus/edu/sg|g' "$ANDROID_XML"
-                    echo "✅ Mobile report patched."
-                  fi
-
-                  # ML FIX: Source tag redirection
+                  echo "Correcting ML coverage paths..."
                   ML_XML="BinItRightML/coverage.xml"
                   if [ -f "$ML_XML" ]; then
                     sed -i 's|<source>.*</source>|<source>BinItRightML</source>|g' "$ML_XML"
                     echo "✅ ML report patched."
                   fi
+
+                  echo "Skipping XML patching for Mobile and Web to maintain class signature integrity."
 
             # ==========================================
             # BUILD BINARIES & SCAN
