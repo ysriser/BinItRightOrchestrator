@@ -1,56 +1,65 @@
-name: "Unified Workflow Pipeline"
+name: "FINAL CONSOLIDATED AUDIT"
 
 on:
-    workflow_dispatch: # Allows you to run it manually for the professor
+    workflow_dispatch:
 
 jobs:
     unified-scan:
         runs-on: ubuntu-latest
         steps:
-            - name: Checkout Orchestrator & Submodules
+            # --- AUTHORIZED CHECKOUT ---
+            - name: Checkout Orchestrator
               uses: actions/checkout@v4
               with:
                   token: ${{ secrets.GH_PAT }}
-                  submodules: "recursive"
                   fetch-depth: 0
 
-            # --- ENV SETUP ---
+            - name: Force Submodule Init with PAT
+              run: |
+                  # Forces Git to use PAT for the private submodules
+                  git config --global url."https://${{ secrets.GH_PAT }}@github.com/".insteadOf "https://github.com/"
+                  git submodule update --init --recursive
+
+            - name: Debug Workspace (Sanity Check)
+              run: ls -R # Confirms folders like BinItRightWebApp exist
+
+            # --- ENVIRONMENT SETUP ---
             - uses: actions/setup-java@v3
               with: { java-version: "17", distribution: "temurin" }
             - uses: actions/setup-python@v4
               with: { python-version: "3.10" }
 
-            # --- BUILD & GENERATE COVERAGE ---
-            - name: Build Web (Java)
+            # --- BUILD & GENERATE COVERAGE (INDIVIDUAL) ---
+            - name: Build WebApp (Java)
               run: |
                   cd BinItRightWebApp
                   chmod +x mvnw
-                  ./mvnw clean verify
+                  ./mvnw clean verify # Generates JaCoCo XML
 
             - name: Build ML (Python)
               run: |
                   cd BinItRightML
                   pip install -r requirements.txt
                   pip install pytest-cov
-                  pytest --cov=. --cov-report=xml
+                  pytest --cov=. --cov-report=xml # Generates coverage.xml
 
-            - name: Build Mobile (Android)
+            - name: Build MobileApp (Android)
               run: |
                   cd BinItRightMobileApp
                   chmod +x gradlew
-                  ./gradlew testDebugUnitTest
+                  ./gradlew testDebugUnitTest # Generates Android JaCoCo XML
 
-            # --- CONSOLIDATED SCA (OWASP) ---
+            # --- CONSOLIDATED SCA (OWASP Dependency-Check) ---
             - name: Unified SCA Scan
               uses: dependency-check/Dependency-Check_Action@main
               with:
                   project: "BinItRight_Overall"
-                  path: "."
+                  path: "." # Scans all 3 folders at once
                   format: "ALL"
                   out: "reports"
 
-            # --- UNIFIED SONAR SCAN ---
-            - name: SonarCloud Scan (SAST & Code Quality)
+            # --- CONSOLIDATED SAST & QUALITY (SonarCloud) ---
+            - name: Unified Sonar Scan
               uses: sonarsource/sonarcloud-github-action@master
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
