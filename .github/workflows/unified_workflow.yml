@@ -38,7 +38,6 @@ jobs:
               run: |
                   cd BinItRightML
                   pip install --upgrade pip
-                  # Force valid scikit-learn version
                   pip install scikit-learn==1.7.2
                   pip install -r requirements.txt || echo "Ignoring conflicts"
                   pip install pytest-cov
@@ -53,6 +52,9 @@ jobs:
             # --- 4. CONSOLIDATED SCA (OWASP Dependency-Check) ---
             - name: Unified SCA Scan
               uses: dependency-check/Dependency-Check_Action@main
+              env:
+                  # Fix for "JAVA_HOME is not defined correctly"
+                  JAVA_HOME: /opt/jdk
               with:
                   project: "BinItRight_Overall"
                   path: "."
