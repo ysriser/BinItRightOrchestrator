@@ -9,9 +9,6 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-            # ==========================================
-            # SETUP
-            # ==========================================
             - name: Checkout Parent Repo with Submodules
               uses: actions/checkout@v4
               with:
@@ -24,7 +21,6 @@ jobs:
               with:
                   java-version: "21"
                   distribution: "temurin"
-                  cache: "maven"
 
             - name: Set up Python 3.11
               uses: actions/setup-python@v5
@@ -32,23 +28,55 @@ jobs:
                   python-version: "3.11"
 
             # ==========================================
-            # DOWNLOAD COVERAGE ARTIFACTS (Throttling Fix)
+            # DOWNLOAD COVERAGE ARTIFACTS (V3)
             # ==========================================
-            - name: Download Reports via GH CLI
-              env:
-                  GH_TOKEN: ${{ secrets.GH_PAT }}
-              run: |
-                  echo "Downloading Android Coverage..."
-                  gh artifact download --repo ysriser/BinItRightMobileApp --name android-coverage-reports --dir BinItRightMobileApp/app/build/reports/jacoco || echo "⚠️ Android reports not found"
+            - name: Download Android Coverage
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: android_cicd.yml
+                  repo: ysriser/BinItRightMobileApp
+                  name: android-coverage-reports
+                  path: BinItRightMobileApp/app/build/reports/jacoco
+                  search_artifacts: true
+                  check_artifacts: true
+                  if_no_artifact_found: warn
 
-                  echo "Downloading Java Coverage..."
-                  gh artifact download --repo ysriser/BinItRightWebApp --name java-coverage-reports --dir BinItRightWebApp/target/site/jacoco || echo "⚠️ Java reports not found"
+            - name: API Cooldown
+              run: sleep 5
 
-                  echo "Downloading Python Coverage..."
-                  gh artifact download --repo ysriser/BinItRightML --name python-coverage-reports --dir BinItRightML || echo "⚠️ Python reports not found"
+            - name: Download Java Coverage
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: pr_validation.yml
+                  repo: ysriser/BinItRightWebApp
+                  name: java-coverage-reports
+                  path: BinItRightWebApp/target/site/jacoco
+                  search_artifacts: true
+                  check_artifacts: true
+                  if_no_artifact_found: warn
+
+            - name: API Cooldown
+              run: sleep 5
+
+            - name: Download Python Coverage
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: pr_validation.yml
+                  repo: ysriser/BinItRightML
+                  name: python-coverage-reports
+                  path: BinItRightML
+                  search_artifacts: true
+                  check_artifacts: true
+                  if_no_artifact_found: warn
 
             # ==========================================
-            # BUILD BINARIES (Required for Java Coverage)
+            # BUILD BINARIES (Required for JaCoCo)
             # ==========================================
             - name: Compile Java Web App & Export Libraries
               run: |
@@ -60,16 +88,6 @@ jobs:
                      echo "❌ BinItRightWebApp directory not found!"
                      exit 1
                   fi
-
-            # ==========================================
-            # DEBUG PATHS (Verify before scanning)
-            # ==========================================
-            - name: Verify Report Locations
-              run: |
-                  echo "--- Checking for coverage files ---"
-                  find . -name "jacoco.xml"
-                  find . -name "jacocoTestReport.xml"
-                  find . -name "coverage.xml"
 
             # ==========================================
             # SONARCLOUD ANALYSIS
@@ -84,12 +102,3 @@ jobs:
                       -Dsonar.verbose=true
                       -Dsonar.projectKey=ysriser_BinItRightOrchestrator
                       -Dsonar.organization=ysriser
-
-            # ==========================================
-            # RESULTS SUMMARY
-            # ==========================================
-            - name: Generate Summary
-              if: always()
-              run: |
-                  echo "## 📊 Unified Coverage Analysis Complete" >> $GITHUB_STEP_SUMMARY
-                  echo "✅ **SonarCloud Dashboard:** https://sonarcloud.io/dashboard?id=ysriser_BinItRightOrchestrator" >> $GITHUB_STEP_SUMMARY
