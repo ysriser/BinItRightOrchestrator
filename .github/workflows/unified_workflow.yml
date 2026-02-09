@@ -103,6 +103,11 @@ jobs:
                   key: ${{ runner.os }}-sonar-${{ hashFiles('**/pom.xml', '**/build.gradle.kts') }}
                   restore-keys: ${{ runner.os }}-sonar
 
+            - name: List Submodule Files (Debug)
+              run: |
+                  echo "Checking Mobile App Submodule Path:"
+                  ls -R submodules/BinItRightMobileApp/app/src/test || echo "❌ Path not found!"
+
             - name: Run SonarCloud Analysis
               uses: SonarSource/sonarcloud-github-action@master
               env:
