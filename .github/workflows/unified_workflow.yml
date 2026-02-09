@@ -1,7 +1,7 @@
 name: Unified Coverage & Quality Analysis
 
 on:
-    workflow_dispatch: # Manual trigger for testing
+    workflow_dispatch:
 
 jobs:
     aggregate:
@@ -24,6 +24,7 @@ jobs:
               with:
                   java-version: "21"
                   distribution: "temurin"
+                  cache: "maven"
 
             - name: Set up Python 3.11
               uses: actions/setup-python@v5
@@ -31,60 +32,25 @@ jobs:
                   python-version: "3.11"
 
             # ==========================================
-            # DOWNLOAD COVERAGE ARTIFACTS
+            # DOWNLOAD COVERAGE ARTIFACTS (Throttling Fix)
             # ==========================================
-            - name: Download Android Coverage
-              uses: dawidd6/action-download-artifact@v3
-              continue-on-error: true
-              with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: android_cicd.yml
-                  repo: ysriser/BinItRightMobileApp
-                  name: android-coverage-reports
-                  path: BinItRightMobileApp/app/build/reports/jacoco
-                  search_artifacts: true
-                  if_no_artifact_found: warn
-
-            - name: Download Java Coverage
-              uses: dawidd6/action-download-artifact@v3
-              continue-on-error: true
-              with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: pr_validation.yml
-                  repo: ysriser/BinItRightWebApp
-                  name: java-coverage-reports
-                  path: BinItRightWebApp/target/site/jacoco
-                  search_artifacts: true
-                  if_no_artifact_found: warn
-
-            - name: Download Python Coverage
-              uses: dawidd6/action-download-artifact@v3
-              continue-on-error: true
-              with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: pr_validation.yml
-                  repo: ysriser/BinItRightML
-                  name: python-coverage-reports
-                  path: BinItRightML
-                  search_artifacts: true
-                  if_no_artifact_found: warn
-
-            # ==========================================
-            # SONARCLOUD ANALYSIS
-            # ==========================================
-            - name: Cache SonarCloud Packages
-              uses: actions/cache@v4
-              with:
-                  path: ~/.sonar/cache
-                  key: ${{ runner.os }}-sonar-${{ hashFiles('**/pom.xml', '**/build.gradle.kts') }}
-                  restore-keys: ${{ runner.os }}-sonar
-
-            - name: List Submodule Files (Debug)
+            - name: Download Reports via GH CLI
+              env:
+                  GH_TOKEN: ${{ secrets.GH_PAT }}
               run: |
-                  echo "Checking Mobile App Submodule Path:"
-                  ls -R BinItRightMobileApp/app/src/test || echo "❌ Path not found!"
+                  echo "Downloading Android Coverage..."
+                  gh artifact download --repo ysriser/BinItRightMobileApp --name android-coverage-reports --dir BinItRightMobileApp/app/build/reports/jacoco || echo "⚠️ Android reports not found"
 
-            - name: Compile Java Web App
+                  echo "Downloading Java Coverage..."
+                  gh artifact download --repo ysriser/BinItRightWebApp --name java-coverage-reports --dir BinItRightWebApp/target/site/jacoco || echo "⚠️ Java reports not found"
+
+                  echo "Downloading Python Coverage..."
+                  gh artifact download --repo ysriser/BinItRightML --name python-coverage-reports --dir BinItRightML || echo "⚠️ Python reports not found"
+
+            # ==========================================
+            # BUILD BINARIES (Required for Java Coverage)
+            # ==========================================
+            - name: Compile Java Web App & Export Libraries
               run: |
                   if [ -d "BinItRightWebApp" ]; then
                      cd BinItRightWebApp
@@ -95,8 +61,21 @@ jobs:
                      exit 1
                   fi
 
+            # ==========================================
+            # DEBUG PATHS (Verify before scanning)
+            # ==========================================
+            - name: Verify Report Locations
+              run: |
+                  echo "--- Checking for coverage files ---"
+                  find . -name "jacoco.xml"
+                  find . -name "jacocoTestReport.xml"
+                  find . -name "coverage.xml"
+
+            # ==========================================
+            # SONARCLOUD ANALYSIS
+            # ==========================================
             - name: Run SonarCloud Analysis
-              uses: SonarSource/sonarcloud-github-action@master
+              uses: SonarSource/sonarqube-scan-action@v5.0.0
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -113,10 +92,4 @@ jobs:
               if: always()
               run: |
                   echo "## 📊 Unified Coverage Analysis Complete" >> $GITHUB_STEP_SUMMARY
-                  echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "✅ **SonarCloud Dashboard:** https://sonarcloud.io/project/overview?id=rselvimaha_BinItRightParent" >> $GITHUB_STEP_SUMMARY
-                  echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "### Coverage Sources:" >> $GITHUB_STEP_SUMMARY
-                  echo "- 📱 Android Mobile App" >> $GITHUB_STEP_SUMMARY
-                  echo "- ☕ Java Spring Boot Web" >> $GITHUB_STEP_SUMMARY
-                  echo "- 🐍 Python ML Service" >> $GITHUB_STEP_SUMMARY
+                  echo "✅ **SonarCloud Dashboard:** https://sonarcloud.io/dashboard?id=ysriser_BinItRightOrchestrator" >> $GITHUB_STEP_SUMMARY
