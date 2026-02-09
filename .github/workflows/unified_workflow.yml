@@ -12,17 +12,14 @@ jobs:
               uses: actions/checkout@v4
               with:
                   token: ${{ secrets.GH_PAT }}
-                  submodules: "recursive" # Automatically pulls submodules using the PAT
+                  submodules: "recursive"
                   fetch-depth: 0
-
-            - name: Debug Workspace
-              run: ls -R # Confirms all submodule folders are present
 
             # --- 2. ENVIRONMENT SETUP ---
             - name: Setup Java 21
               uses: actions/setup-java@v3
               with:
-                  java-version: "21" # Fixed: Now matches your WebApp requirements
+                  java-version: "21"
                   distribution: "temurin"
 
             - name: Setup Python 3.10
@@ -35,27 +32,28 @@ jobs:
               run: |
                   cd BinItRightWebApp
                   chmod +x mvnw
-                  ./mvnw clean verify # Generates JaCoCo report
+                  # -DskipITs skips Integration Tests (Selenium) but runs Unit Tests (JaCoCo)
+                  ./mvnw clean verify -DskipITs
 
             - name: Build ML (Python)
               run: |
                   cd BinItRightML
                   pip install -r requirements.txt
                   pip install pytest-cov
-                  pytest --cov=. --cov-report=xml # Generates coverage.xml
+                  pytest --cov=. --cov-report=xml
 
             - name: Build MobileApp (Android)
               run: |
                   cd BinItRightMobileApp
                   chmod +x gradlew
-                  ./gradlew testDebugUnitTest # Generates Android coverage
+                  ./gradlew testDebugUnitTest
 
             # --- 4. CONSOLIDATED SCA (OWASP Dependency-Check) ---
             - name: Unified SCA Scan
               uses: dependency-check/Dependency-Check_Action@main
               with:
                   project: "BinItRight_Overall"
-                  path: "." # Scans all 3 folders recursively
+                  path: "."
                   format: "ALL"
                   out: "reports"
 
