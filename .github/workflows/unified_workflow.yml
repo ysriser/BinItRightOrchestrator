@@ -70,25 +70,28 @@ jobs:
               run: |
                   ML_XML="BinItRightML/coverage.xml"
                   if [ -f "$ML_XML" ]; then
-                    # Redirects Python's absolute source root to the submodule folder
                     sed -i 's|<source>.*</source>|<source>BinItRightML</source>|g' "$ML_XML"
                     echo "✅ ML report patched."
                   fi
-                  echo "Skipping XML patching for Java/Kotlin to maintain class integrity."
 
             # ==========================================
-            # BUILD BINARIES & DIAGNOSTICS
+            # COMPILE & DIAGNOSTICS
             # ==========================================
             - name: Compile Java Web App
               run: |
                   cd BinItRightWebApp
                   chmod +x mvnw
-                  ./mvnw clean compile test-compile dependency:copy-dependencies -DskipTests
+                  # REMOVED 'clean' to prevent deleting the downloaded jacoco.xml
+                  ./mvnw compile test-compile dependency:copy-dependencies -DskipTests
 
-                  echo "--- Verifying Web Binaries ---"
-                  ls -R target/classes/tech3/binitright/controller | head -n 10
-                  echo "--- Verifying Web Report ---"
-                  ls -l target/site/jacoco/jacoco.xml
+                  echo "--- Verifying Web Report Presence ---"
+                  if [ -f "target/site/jacoco/jacoco.xml" ]; then
+                    echo "✅ jacoco.xml is present."
+                    ls -l target/site/jacoco/jacoco.xml
+                  else
+                    echo "❌ jacoco.xml is MISSING."
+                    exit 1
+                  fi
 
             # ==========================================
             # SONARCLOUD ANALYSIS
