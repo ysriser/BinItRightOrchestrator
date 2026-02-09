@@ -9,6 +9,9 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
+            # ==========================================
+            # SETUP
+            # ==========================================
             - name: Checkout Parent Repo
               uses: actions/checkout@v4
               with:
@@ -28,7 +31,7 @@ jobs:
                   python-version: "3.11"
 
             # ==========================================
-            # DOWNLOAD COVERAGE ARTIFACTS
+            # DOWNLOAD COVERAGE ARTIFACTS (V3)
             # ==========================================
             - name: Download Android Coverage
               uses: dawidd6/action-download-artifact@v3
@@ -67,37 +70,35 @@ jobs:
                   check_artifacts: true
 
             # ==========================================
-            # PATH CORRECTION (The Fix for 0% / Low Coverage)
+            # PATH CORRECTION (The Fix for 0% Coverage)
             # ==========================================
             - name: Fix Coverage XML Paths
               run: |
-                  echo "Applying final path patches..."
+                  echo "Patching XML reports to match Orchestrator structure..."
 
-                  # WEB FIX: Matches the path shown in your screenshot
+                  # Fix Mobile Paths: Adds 'BinItRightMobileApp/' prefix to source paths
+                  ANDROID_XML="BinItRightMobileApp/app/build/reports/jacoco/jacoco/jacocoTestReport/jacocoTestReport.xml"
+                  if [ -f "$ANDROID_XML" ]; then
+                    sed -i 's|app/src/main/java|BinItRightMobileApp/app/src/main/java|g' "$ANDROID_XML"
+                    echo "✅ Mobile report patched."
+                  fi
+
+                  # Fix Web Paths: Adds 'BinItRightWebApp/' prefix to source paths
                   WEB_XML="BinItRightWebApp/target/site/jacoco/jacoco.xml"
                   if [ -f "$WEB_XML" ]; then
-                    # This ensures internal paths start with the module folder name
                     sed -i 's|src/main/java|BinItRightWebApp/src/main/java|g' "$WEB_XML"
-                    echo "✅ Web paths patched."
+                    echo "✅ Web report patched."
                   fi
 
-                  # ML FIX: Aligning the Python coverage
+                  # Fix ML Paths: Redirects <source> tag to the submodule folder
                   ML_XML="BinItRightML/coverage.xml"
                   if [ -f "$ML_XML" ]; then
-                    # Python reports often need the <source> tag updated
                     sed -i 's|<source>.*</source>|<source>BinItRightML</source>|g' "$ML_XML"
-                    echo "✅ ML paths patched."
-                  fi
-
-                  # MOBILE FIX: Double-checking the working one
-                  MOBILE_XML="BinItRightMobileApp/app/build/reports/jacoco/jacoco/jacocoTestReport/jacocoTestReport.xml"
-                  if [ -f "$MOBILE_XML" ]; then
-                    sed -i 's|app/src/main/java|BinItRightMobileApp/app/src/main/java|g' "$MOBILE_XML"
-                    echo "✅ Mobile paths patched."
+                    echo "✅ ML report patched."
                   fi
 
             # ==========================================
-            # BUILD BINARIES
+            # BUILD BINARIES (Required for Web Module)
             # ==========================================
             - name: Compile Java Web App
               run: |
