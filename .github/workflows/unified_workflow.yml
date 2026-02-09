@@ -10,6 +10,7 @@ jobs:
             - name: Checkout Orchestrator & Submodules
               uses: actions/checkout@v4
               with:
+                  token: ${{ secrets.GH_PAT }}
                   submodules: "recursive"
                   fetch-depth: 0
 
