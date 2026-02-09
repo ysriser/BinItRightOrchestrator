@@ -41,7 +41,7 @@ jobs:
                   workflow: android_cicd.yml
                   repo: ysriser/BinItRightMobileApp
                   name: android-coverage-reports
-                  path: submodules/BinItRightMobileApp/app/build/reports/jacoco
+                  path: BinItRightMobileApp/app/build/reports/jacoco
                   search_artifacts: true
                   if_no_artifact_found: warn
 
@@ -80,7 +80,7 @@ jobs:
 
                   echo ""
                   echo "📱 Android Coverage:"
-                  find submodules/BinItRightMobileApp -name "jacocoTestReport.xml" -o -name "lint-results*.xml" | head -5 || echo "  ❌ No Android coverage found"
+                  find BinItRightMobileApp -name "jacocoTestReport.xml" -o -name "lint-results*.xml" | head -5 || echo "  ❌ No Android coverage found"
 
                   echo ""
                   echo "☕ Java Coverage:"
