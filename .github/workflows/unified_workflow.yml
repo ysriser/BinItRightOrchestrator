@@ -111,8 +111,8 @@ jobs:
               with:
                   args: >
                       -Dsonar.verbose=true
-                      -Dsonar.projectKey=rselvimaha_BinItRightParent
-                      -Dsonar.organization=rselvimaha
+                      -Dsonar.projectKey=ysriser_BinItRightOrchestrator
+                      -Dsonar.organization=ysriser
 
             # ==========================================
             # RESULTS SUMMARY
