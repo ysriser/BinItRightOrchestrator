@@ -28,7 +28,7 @@ jobs:
                   python-version: "3.11"
 
             # ==========================================
-            # DOWNLOAD INDIVIDUAL ARTIFACTS
+            # DOWNLOAD ALL ARTIFACTS
             # ==========================================
 
             # --- MOBILE MODULE ---
@@ -40,19 +40,7 @@ jobs:
                   workflow: android_cicd.yml
                   repo: ysriser/BinItRightMobileApp
                   name: android-coverage-reports
-                  # We recreate the full path structure Sonar expects
                   path: BinItRightMobileApp/app/build/reports/jacoco/jacocoLocalDebugUnitTestReport/
-                  search_artifacts: true
-
-            - name: Download Mobile SCA
-              uses: dawidd6/action-download-artifact@v3
-              continue-on-error: true
-              with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: android_cicd.yml
-                  repo: ysriser/BinItRightMobileApp
-                  name: android-sca-results
-                  path: BinItRightMobileApp/
                   search_artifacts: true
 
             - name: Download Mobile Lint
@@ -64,6 +52,28 @@ jobs:
                   repo: ysriser/BinItRightMobileApp
                   name: android-lint-reports
                   path: BinItRightMobileApp/app/build/reports/
+                  search_artifacts: true
+
+            - name: Download Mobile SAST
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: android_cicd.yml
+                  repo: ysriser/BinItRightMobileApp
+                  name: android-sast-results
+                  path: BinItRightMobileApp/
+                  search_artifacts: true
+
+            - name: Download Mobile SCA (Trivy)
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: android_cicd.yml
+                  repo: ysriser/BinItRightMobileApp
+                  name: android-sca-results
+                  path: BinItRightMobileApp/
                   search_artifacts: true
 
             # --- WEB MODULE ---
@@ -78,18 +88,7 @@ jobs:
                   path: BinItRightWebApp/target/site/jacoco
                   search_artifacts: true
 
-            - name: Download Web SCA
-              uses: dawidd6/action-download-artifact@v3
-              continue-on-error: true
-              with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: pr_validation.yml
-                  repo: ysriser/BinItRightWebApp
-                  name: java-sca-results
-                  path: BinItRightWebApp/
-                  search_artifacts: true
-
-            - name: Download Web Lint
+            - name: Download Web Lint (Checkstyle)
               uses: dawidd6/action-download-artifact@v3
               continue-on-error: true
               with:
@@ -98,6 +97,28 @@ jobs:
                   repo: ysriser/BinItRightWebApp
                   name: java-lint-reports
                   path: BinItRightWebApp/target/
+                  search_artifacts: true
+
+            - name: Download Web SAST (Semgrep)
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: pr_validation.yml
+                  repo: ysriser/BinItRightWebApp
+                  name: java-sast-results
+                  path: BinItRightWebApp/
+                  search_artifacts: true
+
+            - name: Download Web SCA (Trivy)
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: pr_validation.yml
+                  repo: ysriser/BinItRightWebApp
+                  name: java-sca-results
+                  path: BinItRightWebApp/
                   search_artifacts: true
 
             # --- ML MODULE ---
@@ -112,18 +133,7 @@ jobs:
                   path: BinItRightML/
                   search_artifacts: true
 
-            - name: Download ML SCA
-              uses: dawidd6/action-download-artifact@v3
-              continue-on-error: true
-              with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: pr_validation.yml
-                  repo: ysriser/BinItRightML
-                  name: python-sca-results
-                  path: BinItRightML/
-                  search_artifacts: true
-
-            - name: Download ML Lint
+            - name: Download ML Lint (Ruff)
               uses: dawidd6/action-download-artifact@v3
               continue-on-error: true
               with:
@@ -134,44 +144,67 @@ jobs:
                   path: BinItRightML/
                   search_artifacts: true
 
+            - name: Download ML SAST (Bandit)
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: pr_validation.yml
+                  repo: ysriser/BinItRightML
+                  name: python-sast-results
+                  path: BinItRightML/
+                  search_artifacts: true
+
+            - name: Download ML SCA (Trivy)
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: pr_validation.yml
+                  repo: ysriser/BinItRightML
+                  name: python-sca-results
+                  path: BinItRightML/
+                  search_artifacts: true
+
             # ==========================================
-            # PATH CORRECTION (Final Precise Version)
+            # PATH CORRECTION (RESTORED PRECISE VERSION)
             # ==========================================
             - name: Fix Report Paths
               run: |
                   echo "Aligning external report paths with Orchestrator structure..."
 
                   # 1. Java (Checkstyle) Fix
-                  # Find any absolute path ending in /src/main/java and make it relative to the module
                   if [ -f "BinItRightWebApp/target/checkstyle-result.xml" ]; then
-                    sed -i 's|/home/runner/work/[^/]*/[^/]*/src/|src/|g' BinItRightWebApp/target/checkstyle-result.xml
-                    # Verify: This should leave the path as 'src/main/java/...'
-                    echo "✅ Checkstyle paths rewritten to relative."
+                    sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightWebApp/target/checkstyle-result.xml
+                    echo "✅ Checkstyle paths rewritten."
                   fi
 
-                  # 2. Python (Ruff) Fix
-                  # We strip everything before the file name so it is relative to 'BinItRightML/'
-                  if [ -f "BinItRightML/ruff-report.json" ]; then
-                    sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/ruff-report.json
-                    echo "✅ Ruff paths rewritten to relative."
-                  fi
+                  # 2. Python (Ruff/Bandit) Fix
+                  [ -f "BinItRightML/ruff-report.json" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/ruff-report.json
+                  [ -f "BinItRightML/bandit-results.json" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/bandit-results.json
 
                   # 3. Mobile (Android Lint) Fix
-                  # Android Lint reports often use absolute paths; we need them to be relative to 'BinItRightMobileApp/'
-                  if [ -f "BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml" ]; then
-                    sed -i 's|/home/runner/work/[^/]*/[^/]*/app/|app/|g' BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml
-                    echo "✅ Android Lint paths rewritten to relative."
-                  fi
+                  [ -f "BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml
 
-                  # 4. Python Coverage Fix (Keep this)
+                  # 4. Python Coverage Fix
                   if [ -f "BinItRightML/coverage.xml" ]; then
                     sed -i 's|<source>.*</source>|<source>.</source>|g' "BinItRightML/coverage.xml"
                   fi
 
-                  # 5. SARIF (SCA) Fixes (Keep these)
-                  [ -f "BinItRightMobileApp/android-sca.sarif" ] && sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "BinItRightMobileApp/|g' BinItRightMobileApp/android-sca.sarif
-                  [ -f "BinItRightWebApp/java-sca.sarif" ] && sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "BinItRightWebApp/|g' BinItRightWebApp/java-sca.sarif
-                  [ -f "BinItRightML/python-sca.sarif" ] && sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "BinItRightML/|g' BinItRightML/python-sca.sarif
+                  # 5. Global SARIF Fix (SCA, Semgrep, MobSF)
+                  # Handle MobSF rename first
+                  if [ -f "BinItRightMobileApp/results.sarif" ]; then
+                    mv BinItRightMobileApp/results.sarif BinItRightMobileApp/android-sast.sarif
+                  fi
+
+                  find . -name "*.sarif" -exec sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "|g' {} +
+
+                  # Re-prefix SARIF for Orchestrator nesting
+                  sed -i 's|"uri": "|"uri": "BinItRightMobileApp/|g' BinItRightMobileApp/*.sarif
+                  sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/*.sarif
+                  sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/*.sarif
+
+                  echo "✅ All paths aligned."
 
             # ==========================================
             # COMPILE & SCAN
@@ -181,11 +214,6 @@ jobs:
                   cd BinItRightWebApp
                   chmod +x mvnw
                   ./mvnw compile test-compile dependency:copy-dependencies -DskipTests
-
-            - name: Debug File Paths
-              run: |
-                  echo "--- Checking for Android XML ---"
-                  find BinItRightMobileApp -name "*.xml" | grep jacoco
 
             - name: Run SonarCloud Analysis
               uses: SonarSource/sonarqube-scan-action@v5.0.0
