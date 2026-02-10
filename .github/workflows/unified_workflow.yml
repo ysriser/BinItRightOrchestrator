@@ -185,6 +185,7 @@ jobs:
           repo: ysriser/BinItRightML
           name: python-dast-results
           path: BinItRightML/
+          search_artifacts: true
 
       # ==========================================
       # PATH CORRECTION
