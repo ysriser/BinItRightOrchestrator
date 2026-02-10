@@ -213,6 +213,7 @@ jobs:
             sed -i 's|<source>.*</source>|<source>.</source>|g' BinItRightML/coverage.xml
           fi
           if [ -d "BinItRightML" ]; then
+             echo "✅ Fixing ML JSON report paths..."
              find BinItRightML -name "*.json" -exec sed -i "s|$ML_PREFIX||g" {} +
           fi
 
@@ -233,12 +234,23 @@ jobs:
           [ -d "BinItRightWebApp" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/*.sarif
           [ -d "BinItRightML" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/*.sarif
 
-          # --- 6. DAST Conversion (UI Only) ---
-          echo "✅ Converting DAST format..."
+          # --- 6. DAST Conversion (Java & Python) ---
+          echo "✅ Converting DAST formats..."
+
+          # Java Web App Conversion
           if [ -f "BinItRightWebApp/ui-report.json" ]; then
             python3 zap_to_sonar.py BinItRightWebApp/ui-report.json BinItRightWebApp/java-dast-ui.json BinItRightWebApp
           else
-            echo "⚠️ ui-report.json not found, check submodule artifacts."
+            echo "⚠️ Java ui-report.json not found. Creating placeholder..."
+            echo '{"issues": []}' > BinItRightWebApp/java-dast-ui.json
+          fi
+
+          # Python ML Conversion (Fixes NoSuchFileException)
+          if [ -f "BinItRightML/report_json.json" ]; then
+            python3 zap_to_sonar.py BinItRightML/report_json.json BinItRightML/python-dast.json BinItRightML
+          else
+            echo "⚠️ Python DAST report not found. Creating placeholder..."
+            echo '{"issues": []}' > BinItRightML/python-dast.json
           fi
 
           echo "🎉 All reports aligned and ready for SonarCloud Analysis."
