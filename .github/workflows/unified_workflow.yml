@@ -133,6 +133,17 @@ jobs:
           path: BinItRightML/
           search_artifacts: true
 
+      - name: Download ML Lint
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: pr_validation.yml
+          repo: ysriser/BinItRightML
+          name: python-lint-reports
+          path: BinItRightML/
+          search_artifacts: true
+
       - name: Download ML SAST
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
