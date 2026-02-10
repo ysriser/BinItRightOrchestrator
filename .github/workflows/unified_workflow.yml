@@ -181,7 +181,8 @@ jobs:
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
         with:
-          workflow: pr_validation.yml
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: master_deploy.yml
           repo: ysriser/BinItRightML
           name: python-dast-results
           path: BinItRightML/
