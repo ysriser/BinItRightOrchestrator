@@ -1,222 +1,208 @@
 name: Unified Coverage & Quality Analysis
 
 on:
-    workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
-    aggregate:
-        name: Aggregate & Analyze
-        runs-on: ubuntu-latest
+  aggregate:
+    name: Aggregate & Analyze
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout Parent Repo
-              uses: actions/checkout@v4
-              with:
-                  submodules: recursive
-                  fetch-depth: 0
-                  token: ${{ secrets.GH_PAT }}
+    steps:
+      - name: Checkout Parent Repo
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT }}
 
-            - name: Set up JDK 21
-              uses: actions/setup-java@v4
-              with:
-                  java-version: "21"
-                  distribution: "temurin"
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
 
-            - name: Set up Python 3.11
-              uses: actions/setup-python@v5
-              with:
-                  python-version: "3.11"
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-            # ==========================================
-            # STEP-BY-STEP RESILIENT DOWNLOADS
-            # ==========================================
+      # ==========================================
+      # STEP-BY-STEP ARTIFACT DOWNLOADS
+      # ==========================================
 
-            # --- MOBILE ---
-            - name: Download Mobile Coverage
-              uses: dawidd6/action-download-artifact@v3
-              continue-on-error: true
-              with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: android_cicd.yml
-                  repo: ysriser/BinItRightMobileApp
-                  name: android-coverage-reports
-                  path: BinItRightMobileApp/app/build/reports/jacoco/jacocoLocalDebugUnitTestReport/
-                  search_artifacts: true
+      # --- MOBILE (Android) ---
+      - name: Download Mobile Coverage
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: android_cicd.yml
+          repo: ysriser/BinItRightMobileApp
+          name: android-coverage-reports
+          path: BinItRightMobileApp/app/build/reports/jacoco/jacocoLocalDebugUnitTestReport/
+          search_artifacts: true
 
-            - name: Download Mobile Lint
-              uses: dawidd6/action-download-artifact@v3
-              continue-on-error: true
-              with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: android_cicd.yml
-                  repo: ysriser/BinItRightMobileApp
-                  name: android-lint-reports
-                  path: BinItRightMobileApp/app/build/reports/
-                  search_artifacts: true
+      - name: Download Mobile Lint
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: android_cicd.yml
+          repo: ysriser/BinItRightMobileApp
+          name: android-lint-reports
+          path: BinItRightMobileApp/app/build/reports/
+          search_artifacts: true
 
-            - name: Download Mobile SAST (MobSF)
-              uses: dawidd6/action-download-artifact@v3
-              continue-on-error: true
-              with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: android_cicd.yml
-                  repo: ysriser/BinItRightMobileApp
-                  name: android-sast-results
-                  path: BinItRightMobileApp/
-                  search_artifacts: true
+      - name: Download Mobile SAST
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: android_cicd.yml
+          repo: ysriser/BinItRightMobileApp
+          name: android-sast-results
+          path: BinItRightMobileApp/
+          search_artifacts: true
 
-            - name: Download Mobile SCA (Trivy)
-              uses: dawidd6/action-download-artifact@v3
-              continue-on-error: true
-              with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: android_cicd.yml
-                  repo: ysriser/BinItRightMobileApp
-                  name: android-sca-results
-                  path: BinItRightMobileApp/
-                  search_artifacts: true
+      - name: Download Mobile SCA
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: android_cicd.yml
+          repo: ysriser/BinItRightMobileApp
+          name: android-sca-results
+          path: BinItRightMobileApp/
+          search_artifacts: true
 
-            # --- WEB ---
-            - name: Download Web Coverage
-              uses: dawidd6/action-download-artifact@v3
-              continue-on-error: true
-              with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: pr_validation.yml
-                  repo: ysriser/BinItRightWebApp
-                  name: java-coverage-reports
-                  path: BinItRightWebApp/target/site/jacoco
-                  search_artifacts: true
+      # --- WEB (Java Spring) ---
+      - name: Download Web Coverage
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: pr_validation.yml
+          repo: ysriser/BinItRightWebApp
+          name: java-coverage-reports
+          path: BinItRightWebApp/target/site/jacoco
+          search_artifacts: true
 
-            - name: Download Web Lint (PMD/CPD)
-              uses: dawidd6/action-download-artifact@v3
-              continue-on-error: true
-              with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: pr_validation.yml
-                  repo: ysriser/BinItRightWebApp
-                  name: java-lint-reports
-                  path: BinItRightWebApp/target/
-                  search_artifacts: true
+      - name: Download Web Lint (PMD/CPD)
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: pr_validation.yml
+          repo: ysriser/BinItRightWebApp
+          name: java-lint-reports
+          path: BinItRightWebApp/target/
+          search_artifacts: true
 
-            - name: Download Web SAST (Semgrep)
-              uses: dawidd6/action-download-artifact@v3
-              continue-on-error: true
-              with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: pr_validation.yml
-                  repo: ysriser/BinItRightWebApp
-                  name: java-sast-results
-                  path: BinItRightWebApp/
-                  search_artifacts: true
+      - name: Download Web SAST
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: pr_validation.yml
+          repo: ysriser/BinItRightWebApp
+          name: java-sast-results
+          path: BinItRightWebApp/
+          search_artifacts: true
 
-            - name: Download Web SCA (Trivy)
-              uses: dawidd6/action-download-artifact@v3
-              continue-on-error: true
-              with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: pr_validation.yml
-                  repo: ysriser/BinItRightWebApp
-                  name: java-sca-results
-                  path: BinItRightWebApp/
-                  search_artifacts: true
+      - name: Download Web SCA
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: pr_validation.yml
+          repo: ysriser/BinItRightWebApp
+          name: java-sca-results
+          path: BinItRightWebApp/target/
+          search_artifacts: true
 
-            - name: Download Web Selenium
-              uses: dawidd6/action-download-artifact@v3
-              continue-on-error: true
-              with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: master_deploy.yml
-                  repo: ysriser/BinItRightWebApp
-                  name: java-selenium-results
-                  path: BinItRightWebApp/target/failsafe-reports/
-                  search_artifacts: true
+      # --- ML (Python) ---
+      - name: Download ML Coverage/Lint
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: pr_validation.yml
+          repo: ysriser/BinItRightML
+          name: python-coverage-reports
+          path: BinItRightML/
+          search_artifacts: true
 
-            # --- ML ---
-            - name: Download ML Coverage/Lint (Ruff)
-              uses: dawidd6/action-download-artifact@v3
-              continue-on-error: true
-              with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: pr_validation.yml
-                  repo: ysriser/BinItRightML
-                  name: python-coverage-reports
-                  path: BinItRightML/
-                  search_artifacts: true
+      - name: Download ML SAST
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: pr_validation.yml
+          repo: ysriser/BinItRightML
+          name: python-sast-results
+          path: BinItRightML/
+          search_artifacts: true
 
-            - name: Download ML SAST (Bandit)
-              uses: dawidd6/action-download-artifact@v3
-              continue-on-error: true
-              with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: pr_validation.yml
-                  repo: ysriser/BinItRightML
-                  name: python-sast-results
-                  path: BinItRightML/
-                  search_artifacts: true
+      - name: Download ML SCA
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: pr_validation.yml
+          repo: ysriser/BinItRightML
+          name: python-sca-results
+          path: BinItRightML/
+          search_artifacts: true
 
-            - name: Download ML SCA (Trivy)
-              uses: dawidd6/action-download-artifact@v3
-              continue-on-error: true
-              with:
-                  github_token: ${{ secrets.GH_PAT }}
-                  workflow: pr_validation.yml
-                  repo: ysriser/BinItRightML
-                  name: python-sca-results
-                  path: BinItRightML/
-                  search_artifacts: true
+      # ==========================================
+      # PATH CORRECTION
+      # ==========================================
+      - name: Fix Report Paths
+        run: |
+          echo "Aligning paths for SonarCloud..."
 
-            # ==========================================
-            # PATH CORRECTION
-            # ==========================================
-            - name: Fix Report Paths
-              run: |
-                  echo "Aligning paths..."
+          # 1. Java (PMD/CPD)
+          if [ -d "BinItRightWebApp/target" ]; then
+            find BinItRightWebApp/target -name "*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
+          fi
 
-                  # 1. Java (PMD/CPD/Checkstyle)
-                  if [ -d "BinItRightWebApp/target" ]; then
-                    find BinItRightWebApp/target -name "*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
-                  fi
+          # 2. Python (Ruff/Bandit/Coverage)
+          [ -f "BinItRightML/ruff-report.json" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/ruff-report.json
+          [ -f "BinItRightML/bandit-results.json" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/bandit-results.json
+          [ -f "BinItRightML/coverage.xml" ] && sed -i 's|<source>.*</source>|<source>.</source>|g' "BinItRightML/coverage.xml"
 
-                  # 2. Python (Ruff/Bandit/Coverage)
-                  [ -f "BinItRightML/ruff-report.json" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/ruff-report.json
-                  [ -f "BinItRightML/bandit-results.json" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/bandit-results.json
-                  [ -f "BinItRightML/coverage.xml" ] && sed -i 's|<source>.*</source>|<source>.</source>|g' "BinItRightML/coverage.xml"
+          # 3. Mobile (Android Lint)
+          [ -f "BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml
 
-                  # 3. Mobile (Android Lint)
-                  [ -f "BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml
+          # 4. Global SARIF Fix
+          if [ -f "BinItRightMobileApp/results.sarif" ]; then
+            mv BinItRightMobileApp/results.sarif BinItRightMobileApp/android-sast.sarif
+          fi
+          find . -name "*.sarif" -exec sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "|g' {} +
 
-                  # 4. Global SARIF
-                  if [ -f "BinItRightMobileApp/results.sarif" ]; then
-                    mv BinItRightMobileApp/results.sarif BinItRightMobileApp/android-sast.sarif
-                  fi
-                  find . -name "*.sarif" -exec sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "|g' {} +
-                  
-                  [ -d "BinItRightMobileApp" ] && sed -i 's|"uri": "|"uri": "BinItRightMobileApp/|g' BinItRightMobileApp/*.sarif
-                  [ -d "BinItRightWebApp" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/*.sarif
-                  [ -d "BinItRightML" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/*.sarif
+          [ -d "BinItRightMobileApp" ] && sed -i 's|"uri": "|"uri": "BinItRightMobileApp/|g' BinItRightMobileApp/*.sarif
+          [ -d "BinItRightWebApp" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/*.sarif
+          [ -d "BinItRightML" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/*.sarif
 
-                  # 5. Selenium JUnit
-                  if [ -d "BinItRightWebApp/target/failsafe-reports" ]; then
-                    find BinItRightWebApp/target/failsafe-reports -name "TEST-*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
-                  fi
+          echo "✅ Path alignment complete."
 
-            # ==========================================
-            # COMPILE & SCAN
-            # ==========================================
-            - name: Compile Java Web App
-              run: |
-                  cd BinItRightWebApp
-                  chmod +x mvnw
-                  ./mvnw compile test-compile dependency:copy-dependencies -DskipTests
+      # ==========================================
+      # COMPILE & SCAN
+      # ==========================================
+      - name: Compile Java Web App
+        run: |
+          cd BinItRightWebApp
+          chmod +x mvnw
+          ./mvnw compile test-compile dependency:copy-dependencies -DskipTests
 
-            - name: Run SonarCloud Analysis
-              uses: SonarSource/sonarqube-scan-action@v5.0.0
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-              with:
-                  args: >
-                      -Dsonar.verbose=true
-                      -Dsonar.projectKey=ysriser_BinItRightOrchestrator
-                      -Dsonar.organization=ysriser
+      - name: Run SonarCloud Analysis
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.verbose=true
+            -Dsonar.projectKey=ysriser_BinItRightOrchestrator
+            -Dsonar.organization=ysriser
