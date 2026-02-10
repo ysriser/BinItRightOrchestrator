@@ -30,34 +30,69 @@ jobs:
             # ==========================================
             # DOWNLOAD ALL ARTIFACTS (Coverage + SCA)
             # ==========================================
-            - name: Download Mobile Artifacts
+            - name: Download Mobile Coverage
               uses: dawidd6/action-download-artifact@v3
               continue-on-error: true
               with:
                   github_token: ${{ secrets.GH_PAT }}
                   workflow: android_cicd.yml
                   repo: ysriser/BinItRightMobileApp
-                  # Downloads coverage to original path and SCA to module root
+                  name: android-coverage-reports
+                  path: BinItRightMobileApp/app/build/reports/jacoco
+                  search_artifacts: true
+
+            - name: Download Mobile SCA
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: android_cicd.yml
+                  repo: ysriser/BinItRightMobileApp
+                  name: android-sca-results
                   path: BinItRightMobileApp/
                   search_artifacts: true
 
-            - name: Download Web Artifacts
+            - name: Download Web Coverage
               uses: dawidd6/action-download-artifact@v3
               continue-on-error: true
               with:
                   github_token: ${{ secrets.GH_PAT }}
                   workflow: pr_validation.yml
                   repo: ysriser/BinItRightWebApp
+                  name: java-coverage-reports
+                  path: BinItRightWebApp/target/site/jacoco
+                  search_artifacts: true
+
+            - name: Download Web SCA
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: pr_validation.yml
+                  repo: ysriser/BinItRightWebApp
+                  name: java-sca-results
                   path: BinItRightWebApp/
                   search_artifacts: true
 
-            - name: Download ML Artifacts
+            - name: Download ML Coverage
               uses: dawidd6/action-download-artifact@v3
               continue-on-error: true
               with:
                   github_token: ${{ secrets.GH_PAT }}
                   workflow: pr_validation.yml
                   repo: ysriser/BinItRightML
+                  name: python-coverage-reports
+                  path: BinItRightML/
+                  search_artifacts: true
+
+            - name: Download ML SCA
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: pr_validation.yml
+                  repo: ysriser/BinItRightML
+                  name: python-sca-results
                   path: BinItRightML/
                   search_artifacts: true
 
