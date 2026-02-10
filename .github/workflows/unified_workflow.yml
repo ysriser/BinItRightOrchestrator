@@ -135,38 +135,43 @@ jobs:
                   search_artifacts: true
 
             # ==========================================
-            # PATH CORRECTION
+            # PATH CORRECTION (Final Precise Version)
             # ==========================================
             - name: Fix Report Paths
               run: |
-                  echo "Aligning Lint and Coverage paths..."
+                  echo "Aligning external report paths with Orchestrator structure..."
 
-                  # 1. Python (Ruff) Path Fix:
-                  # Ruff JSON often uses relative paths. If it uses 'BinItRightML/file.py', 
-                  # we strip 'BinItRightML/' so it matches the ML module root.
-                  if [ -f "BinItRightML/ruff-report.json" ]; then
-                    sed -i 's|BinItRightML/||g' BinItRightML/ruff-report.json
-                    echo "✅ Ruff paths aligned."
-                  fi
-
-                  # 2. Java (Checkstyle) Path Fix:
-                  # Checkstyle XML uses 'src/main/java/...'. Since our web.sonar.sources 
-                  # is 'src/main/java', we need to make sure the XML matches.
-                  # If the XML has 'BinItRightWebApp/src/main/java', we strip the prefix.
+                  # 1. Java (Checkstyle) Fix
+                  # Find any absolute path ending in /src/main/java and make it relative to the module
                   if [ -f "BinItRightWebApp/target/checkstyle-result.xml" ]; then
-                    sed -i 's|BinItRightWebApp/||g' BinItRightWebApp/target/checkstyle-result.xml
-                    echo "✅ Checkstyle paths aligned."
+                    sed -i 's|/home/runner/work/[^/]*/[^/]*/src/|src/|g' BinItRightWebApp/target/checkstyle-result.xml
+                    # Verify: This should leave the path as 'src/main/java/...'
+                    echo "✅ Checkstyle paths rewritten to relative."
                   fi
 
-                  # 3. Python Coverage (Keep your existing fix)
+                  # 2. Python (Ruff) Fix
+                  # We strip everything before the file name so it is relative to 'BinItRightML/'
+                  if [ -f "BinItRightML/ruff-report.json" ]; then
+                    sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/ruff-report.json
+                    echo "✅ Ruff paths rewritten to relative."
+                  fi
+
+                  # 3. Mobile (Android Lint) Fix
+                  # Android Lint reports often use absolute paths; we need them to be relative to 'BinItRightMobileApp/'
+                  if [ -f "BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml" ]; then
+                    sed -i 's|/home/runner/work/[^/]*/[^/]*/app/|app/|g' BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml
+                    echo "✅ Android Lint paths rewritten to relative."
+                  fi
+
+                  # 4. Python Coverage Fix (Keep this)
                   if [ -f "BinItRightML/coverage.xml" ]; then
                     sed -i 's|<source>.*</source>|<source>.</source>|g' "BinItRightML/coverage.xml"
                   fi
 
-                  # 4. SARIF (SCA) Fixes (Keep these)
-                  [ -f "BinItRightMobileApp/android-sca.sarif" ] && sed -i 's|"uri": "|"uri": "BinItRightMobileApp/|g' BinItRightMobileApp/android-sca.sarif
-                  [ -f "BinItRightWebApp/java-sca.sarif" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/java-sca.sarif
-                  [ -f "BinItRightML/python-sca.sarif" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/python-sca.sarif
+                  # 5. SARIF (SCA) Fixes (Keep these)
+                  [ -f "BinItRightMobileApp/android-sca.sarif" ] && sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "BinItRightMobileApp/|g' BinItRightMobileApp/android-sca.sarif
+                  [ -f "BinItRightWebApp/java-sca.sarif" ] && sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "BinItRightWebApp/|g' BinItRightWebApp/java-sca.sarif
+                  [ -f "BinItRightML/python-sca.sarif" ] && sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "BinItRightML/|g' BinItRightML/python-sca.sarif
 
             # ==========================================
             # COMPILE & SCAN
