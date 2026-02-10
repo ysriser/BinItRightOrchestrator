@@ -132,14 +132,16 @@ jobs:
           path: BinItRightWebApp/target/site/jacoco-it/
           search_artifacts: true
 
-      - name: Download Java DAST
+      - name: Download Java DAST Results
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
         with:
+          github_token: ${{ secrets.GH_PAT }}
           workflow: master_deployment.yml
           repo: ysriser/BinItRightWebApp
           name: java-dast-results
           path: BinItRightWebApp/
+          search_artifacts: true
 
       # --- ML (Python) ---
       - name: Download ML Coverage/Lint
