@@ -235,3 +235,4 @@ jobs:
             -Dsonar.verbose=true
             -Dsonar.projectKey=ysriser_BinItRightOrchestrator
             -Dsonar.organization=ysriser
+            -Dsonar.java.checkstyle.reportPaths=BinItRightWebApp/target/checkstyle-result.xml
