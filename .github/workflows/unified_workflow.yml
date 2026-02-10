@@ -28,9 +28,11 @@ jobs:
                   python-version: "3.11"
 
             # ==========================================
-            # DOWNLOAD COVERAGE ARTIFACTS
+            # DOWNLOAD INDIVIDUAL ARTIFACTS
             # ==========================================
-            - name: Download Android Coverage
+
+            # --- MOBILE MODULE ---
+            - name: Download Mobile Coverage
               uses: dawidd6/action-download-artifact@v3
               continue-on-error: true
               with:
@@ -38,10 +40,34 @@ jobs:
                   workflow: android_cicd.yml
                   repo: ysriser/BinItRightMobileApp
                   name: android-coverage-reports
-                  path: BinItRightMobileApp/app/build/reports/jacoco
+                  # We recreate the full path structure Sonar expects
+                  path: BinItRightMobileApp/app/build/reports/jacoco/jacocoLocalDebugUnitTestReport/
                   search_artifacts: true
 
-            - name: Download Java Coverage
+            - name: Download Mobile SCA
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: android_cicd.yml
+                  repo: ysriser/BinItRightMobileApp
+                  name: android-sca-results
+                  path: BinItRightMobileApp/
+                  search_artifacts: true
+
+            - name: Download Mobile Lint
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: android_cicd.yml
+                  repo: ysriser/BinItRightMobileApp
+                  name: android-lint-reports
+                  path: BinItRightMobileApp/app/build/reports/
+                  search_artifacts: true
+
+            # --- WEB MODULE ---
+            - name: Download Web Coverage
               uses: dawidd6/action-download-artifact@v3
               continue-on-error: true
               with:
@@ -52,7 +78,30 @@ jobs:
                   path: BinItRightWebApp/target/site/jacoco
                   search_artifacts: true
 
-            - name: Download Python Coverage
+            - name: Download Web SCA
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: pr_validation.yml
+                  repo: ysriser/BinItRightWebApp
+                  name: java-sca-results
+                  path: BinItRightWebApp/
+                  search_artifacts: true
+
+            - name: Download Web Lint
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: pr_validation.yml
+                  repo: ysriser/BinItRightWebApp
+                  name: java-lint-reports
+                  path: BinItRightWebApp/target/
+                  search_artifacts: true
+
+            # --- ML MODULE ---
+            - name: Download ML Coverage
               uses: dawidd6/action-download-artifact@v3
               continue-on-error: true
               with:
@@ -60,44 +109,84 @@ jobs:
                   workflow: pr_validation.yml
                   repo: ysriser/BinItRightML
                   name: python-coverage-reports
-                  path: BinItRightML
+                  path: BinItRightML/
+                  search_artifacts: true
+
+            - name: Download ML SCA
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: pr_validation.yml
+                  repo: ysriser/BinItRightML
+                  name: python-sca-results
+                  path: BinItRightML/
+                  search_artifacts: true
+
+            - name: Download ML Lint
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: pr_validation.yml
+                  repo: ysriser/BinItRightML
+                  name: python-lint-reports
+                  path: BinItRightML/
                   search_artifacts: true
 
             # ==========================================
-            # PATH CORRECTION (Updated for ML)
+            # PATH CORRECTION (Final Precise Version)
             # ==========================================
-            - name: Fix Python Coverage Paths
+            - name: Fix Report Paths
               run: |
-                  ML_XML="BinItRightML/coverage.xml"
-                  if [ -f "$ML_XML" ]; then
-                    # Change the source root to '.' so Sonar looks relative to the projectBaseDir
-                    sed -i 's|<source>.*</source>|<source>.</source>|g' "$ML_XML"
-                    echo "✅ ML report paths set to relative."
+                  echo "Aligning external report paths with Orchestrator structure..."
+
+                  # 1. Java (Checkstyle) Fix
+                  # Find any absolute path ending in /src/main/java and make it relative to the module
+                  if [ -f "BinItRightWebApp/target/checkstyle-result.xml" ]; then
+                    sed -i 's|/home/runner/work/[^/]*/[^/]*/src/|src/|g' BinItRightWebApp/target/checkstyle-result.xml
+                    # Verify: This should leave the path as 'src/main/java/...'
+                    echo "✅ Checkstyle paths rewritten to relative."
                   fi
-                  echo "Skipping Java/Kotlin XML patching as requested (already working)."
+
+                  # 2. Python (Ruff) Fix
+                  # We strip everything before the file name so it is relative to 'BinItRightML/'
+                  if [ -f "BinItRightML/ruff-report.json" ]; then
+                    sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/ruff-report.json
+                    echo "✅ Ruff paths rewritten to relative."
+                  fi
+
+                  # 3. Mobile (Android Lint) Fix
+                  # Android Lint reports often use absolute paths; we need them to be relative to 'BinItRightMobileApp/'
+                  if [ -f "BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml" ]; then
+                    sed -i 's|/home/runner/work/[^/]*/[^/]*/app/|app/|g' BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml
+                    echo "✅ Android Lint paths rewritten to relative."
+                  fi
+
+                  # 4. Python Coverage Fix (Keep this)
+                  if [ -f "BinItRightML/coverage.xml" ]; then
+                    sed -i 's|<source>.*</source>|<source>.</source>|g' "BinItRightML/coverage.xml"
+                  fi
+
+                  # 5. SARIF (SCA) Fixes (Keep these)
+                  [ -f "BinItRightMobileApp/android-sca.sarif" ] && sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "BinItRightMobileApp/|g' BinItRightMobileApp/android-sca.sarif
+                  [ -f "BinItRightWebApp/java-sca.sarif" ] && sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "BinItRightWebApp/|g' BinItRightWebApp/java-sca.sarif
+                  [ -f "BinItRightML/python-sca.sarif" ] && sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "BinItRightML/|g' BinItRightML/python-sca.sarif
 
             # ==========================================
-            # COMPILE & DIAGNOSTICS
+            # COMPILE & SCAN
             # ==========================================
             - name: Compile Java Web App
               run: |
                   cd BinItRightWebApp
                   chmod +x mvnw
-                  # REMOVED 'clean' to prevent deleting the downloaded jacoco.xml
                   ./mvnw compile test-compile dependency:copy-dependencies -DskipTests
 
-                  echo "--- Verifying Web Report Presence ---"
-                  if [ -f "target/site/jacoco/jacoco.xml" ]; then
-                    echo "✅ jacoco.xml is present."
-                    ls -l target/site/jacoco/jacoco.xml
-                  else
-                    echo "❌ jacoco.xml is MISSING."
-                    exit 1
-                  fi
+            - name: Debug File Paths
+              run: |
+                  echo "--- Checking for Android XML ---"
+                  find BinItRightMobileApp -name "*.xml" | grep jacoco
 
-            # ==========================================
-            # SONARCLOUD ANALYSIS
-            # ==========================================
             - name: Run SonarCloud Analysis
               uses: SonarSource/sonarqube-scan-action@v5.0.0
               env:
