@@ -88,7 +88,7 @@ jobs:
           path: BinItRightWebApp/target/site/jacoco
           search_artifacts: true
 
-      - name: Download Web Lint (PMD/CPD)
+      - name: Download Web Lint (Checkstyle)
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
         with:
@@ -195,7 +195,7 @@ jobs:
         run: |
           echo "Aligning paths for SonarCloud..."
 
-          # 1. Java (PMD/CPD)
+          # 1. Java (Checkstyle)
           if [ -d "BinItRightWebApp/target" ]; then
             find BinItRightWebApp/target -name "*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
           fi
@@ -237,21 +237,20 @@ jobs:
 
           echo "Aligning paths and converting DAST format..."
 
-      - name: Fix Reports and Convert DAST
-        run: |
-          echo "Converting DAST formats for SonarCloud..."
-
-          # 1. Convert Java UI DAST
+          # 1. Convert Java DAST (Fixes NoSuchFile & IllegalState)
           python3 zap_to_sonar.py BinItRightWebApp/ui-report.json BinItRightWebApp/java-dast-ui.json BinItRightWebApp
-
-          # 2. Convert Java API DAST
           python3 zap_to_sonar.py BinItRightWebApp/api-report.json BinItRightWebApp/java-dast-api.json BinItRightWebApp
 
-          # 3. Align standard Java paths (Existing logic)
+          # 2. Convert Python DAST (If applicable)
+          python3 zap_to_sonar.py BinItRightML/report_json.json BinItRightML/python-dast.json BinItRightML
+
+          # 3. Align standard Java paths
           WEB_PREFIX="/home/runner/work/BinItRightWebApp/BinItRightWebApp/"
           if [ -d "BinItRightWebApp/target" ]; then
             find BinItRightWebApp/target -name "*.xml" -exec sed -i "s|$WEB_PREFIX||g" {} +
           fi
+
+          echo "✅ All reports ready."
 
           echo "✅ Path alignment complete."
 
