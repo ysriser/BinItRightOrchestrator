@@ -28,10 +28,10 @@ jobs:
           python-version: "3.11"
 
       # ==========================================
-      # INDIVIDUAL ARTIFACT DOWNLOADS
+      # STEP-BY-STEP ARTIFACT DOWNLOADS
       # ==========================================
 
-      # --- MOBILE ---
+      # --- MOBILE (Android) ---
       - name: Download Mobile Coverage
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
@@ -76,7 +76,7 @@ jobs:
           path: BinItRightMobileApp/
           search_artifacts: true
 
-      # --- WEB ---
+      # --- WEB (Java Spring) ---
       - name: Download Web Coverage
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
@@ -132,7 +132,7 @@ jobs:
           path: BinItRightWebApp/target/failsafe-reports/
           search_artifacts: true
 
-      # --- ML ---
+      # --- ML (Python) ---
       - name: Download ML Coverage/Lint
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
@@ -171,9 +171,9 @@ jobs:
       # ==========================================
       - name: Fix Report Paths
         run: |
-          echo "Aligning paths and sanitizing reports..."
+          echo "Aligning paths and sanitizing Selenium reports..."
 
-          # 1. Java (PMD/CPD)
+          # 1. Java (PMD/CPD) - Strip absolute paths
           if [ -d "BinItRightWebApp/target" ]; then
             find BinItRightWebApp/target -name "*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
           fi
@@ -196,14 +196,29 @@ jobs:
           [ -d "BinItRightWebApp" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/*.sarif
           [ -d "BinItRightML" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/*.sarif
 
-          # 5. Selenium JUnit Surgical Sanitization
+          # 5. Selenium JUnit NUCLEAR SANITIZATION (Python)
+          # This specifically targets raw '<' inside attributes while preserving tag integrity
           if [ -d "BinItRightWebApp/target/failsafe-reports" ]; then
-            echo "Surgically cleaning Selenium XMLs..."
-            find BinItRightWebApp/target/failsafe-reports -name "TEST-*.xml" -exec sed -i 's/<\([^?\/!A-Za-z]\)/ \1/g' {} +
-            find BinItRightWebApp/target/failsafe-reports -name "TEST-*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
-          fi
+            echo "Surgically escaping Selenium XML artifacts..."
+            python3 -c "
+            import os, re
+            path = 'BinItRightWebApp/target/failsafe-reports'
+            if os.path.exists(path):
+                for filename in os.listdir(path):
+                    if filename.endswith('.xml'):
+                        filepath = os.path.join(path, filename)
+                        with open(filepath, 'r') as f:
+                            content = f.read()
+                        # Escape '<' and '>' ONLY when found inside attribute quotes
+                        sanitized = re.sub(r'=\"(.*?)\"', lambda m: '=\"' + m.group(1).replace('<', '&lt;').replace('>', '&gt;') + '\"', content)
+                        with open(filepath, 'w') as f:
+                            f.write(sanitized)
+                                "
+                                # Align paths after content is safe
+                                find BinItRightWebApp/target/failsafe-reports -name "TEST-*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
+                              fi
 
-          echo "✅ Cleanup complete."
+                              echo "✅ Path alignment and sanitization complete."
 
       # ==========================================
       # COMPILE & SCAN
