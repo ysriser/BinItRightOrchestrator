@@ -28,76 +28,69 @@ jobs:
                   python-version: "3.11"
 
             # ==========================================
-            # DOWNLOAD COVERAGE ARTIFACTS
+            # DOWNLOAD ALL ARTIFACTS (Coverage + SCA)
             # ==========================================
-            - name: Download Android Coverage
+            - name: Download Mobile Artifacts
               uses: dawidd6/action-download-artifact@v3
               continue-on-error: true
               with:
                   github_token: ${{ secrets.GH_PAT }}
                   workflow: android_cicd.yml
                   repo: ysriser/BinItRightMobileApp
-                  name: android-coverage-reports
-                  path: BinItRightMobileApp/app/build/reports/jacoco
+                  # Downloads coverage to original path and SCA to module root
+                  path: BinItRightMobileApp/
                   search_artifacts: true
 
-            - name: Download Java Coverage
+            - name: Download Web Artifacts
               uses: dawidd6/action-download-artifact@v3
               continue-on-error: true
               with:
                   github_token: ${{ secrets.GH_PAT }}
                   workflow: pr_validation.yml
                   repo: ysriser/BinItRightWebApp
-                  name: java-coverage-reports
-                  path: BinItRightWebApp/target/site/jacoco
+                  path: BinItRightWebApp/
                   search_artifacts: true
 
-            - name: Download Python Coverage
+            - name: Download ML Artifacts
               uses: dawidd6/action-download-artifact@v3
               continue-on-error: true
               with:
                   github_token: ${{ secrets.GH_PAT }}
                   workflow: pr_validation.yml
                   repo: ysriser/BinItRightML
-                  name: python-coverage-reports
-                  path: BinItRightML
+                  path: BinItRightML/
                   search_artifacts: true
 
             # ==========================================
-            # PATH CORRECTION (Updated for ML)
+            # PATH CORRECTION (Coverage & SCA)
             # ==========================================
-            - name: Fix Python Coverage Paths
+            - name: Fix Report Paths
               run: |
-                  ML_XML="BinItRightML/coverage.xml"
-                  if [ -f "$ML_XML" ]; then
-                    # Change the source root to '.' so Sonar looks relative to the projectBaseDir
-                    sed -i 's|<source>.*</source>|<source>.</source>|g' "$ML_XML"
-                    echo "✅ ML report paths set to relative."
+                  echo "Correcting paths for multi-repo structure..."
+
+                  # 1. Python Coverage Fix
+                  if [ -f "BinItRightML/coverage.xml" ]; then
+                    sed -i 's|<source>.*</source>|<source>.</source>|g' "BinItRightML/coverage.xml"
+                    echo "✅ ML coverage paths set to relative."
                   fi
-                  echo "Skipping Java/Kotlin XML patching as requested (already working)."
+
+                  # 2. SARIF (SCA) Path Fixes
+                  # Replaces internal "uri": "file" with "uri": "Module/file"
+                  [ -f "BinItRightMobileApp/android-sca.sarif" ] && sed -i 's|"uri": "|"uri": "BinItRightMobileApp/|g' BinItRightMobileApp/android-sca.sarif
+                  [ -f "BinItRightWebApp/java-sca.sarif" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/java-sca.sarif
+                  [ -f "BinItRightML/python-sca.sarif" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/python-sca.sarif
+                  echo "✅ SARIF paths corrected."
 
             # ==========================================
-            # COMPILE & DIAGNOSTICS
+            # COMPILE & SCAN
             # ==========================================
             - name: Compile Java Web App
               run: |
                   cd BinItRightWebApp
                   chmod +x mvnw
-                  # REMOVED 'clean' to prevent deleting the downloaded jacoco.xml
+                  # Compiling without 'clean' to keep downloaded reports safe
                   ./mvnw compile test-compile dependency:copy-dependencies -DskipTests
 
-                  echo "--- Verifying Web Report Presence ---"
-                  if [ -f "target/site/jacoco/jacoco.xml" ]; then
-                    echo "✅ jacoco.xml is present."
-                    ls -l target/site/jacoco/jacoco.xml
-                  else
-                    echo "❌ jacoco.xml is MISSING."
-                    exit 1
-                  fi
-
-            # ==========================================
-            # SONARCLOUD ANALYSIS
-            # ==========================================
             - name: Run SonarCloud Analysis
               uses: SonarSource/sonarqube-scan-action@v5.0.0
               env:
