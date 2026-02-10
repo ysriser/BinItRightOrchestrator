@@ -132,6 +132,15 @@ jobs:
           path: BinItRightWebApp/target/site/jacoco-it/
           search_artifacts: true
 
+      - name: Download Java DAST
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          workflow: master_deployment.yml
+          repo: ysriser/BinItRightWebApp
+          name: java-dast-results
+          path: BinItRightWebApp/
+
       # --- ML (Python) ---
       - name: Download ML Coverage/Lint
         uses: dawidd6/action-download-artifact@v3
@@ -177,6 +186,15 @@ jobs:
           path: BinItRightML/
           search_artifacts: true
 
+      - name: Download Python DAST
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          workflow: pr_validation.yml
+          repo: ysriser/BinItRightML
+          name: python-dast-results
+          path: BinItRightML/
+
       # ==========================================
       # PATH CORRECTION
       # ==========================================
@@ -218,12 +236,17 @@ jobs:
           [ -d "BinItRightWebApp" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/*.sarif
           [ -d "BinItRightML" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/*.sarif
 
-          # Selenium Coverage Path Fix ---
+          # Selenium Coverage Path Fix
           SEL_COV="BinItRightWebApp/target/site/jacoco-it/jacoco.xml"
           if [ -f "$SEL_COV" ]; then
             echo "✅ Fixing Selenium Coverage paths..."
             sed -i "s|$WEB_PREFIX||g" "$SEL_COV"
           fi
+
+          # DAST Mapping
+          # We rename the generic 'report_json.json' to something Sonar expects
+          [ -f "BinItRightWebApp/report_json.json" ] && mv BinItRightWebApp/report_json.json BinItRightWebApp/java-dast.json
+          [ -f "BinItRightML/report_json.json" ] && mv BinItRightML/report_json.json BinItRightML/python-dast.json
 
           echo "✅ Path alignment complete."
 
