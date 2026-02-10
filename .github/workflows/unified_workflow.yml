@@ -139,16 +139,34 @@ jobs:
             # ==========================================
             - name: Fix Report Paths
               run: |
-                  echo "Fixing paths for multi-repo indexing..."
-                  # Python Coverage Fix
+                  echo "Aligning Lint and Coverage paths..."
+
+                  # 1. Python (Ruff) Path Fix:
+                  # Ruff JSON often uses relative paths. If it uses 'BinItRightML/file.py', 
+                  # we strip 'BinItRightML/' so it matches the ML module root.
+                  if [ -f "BinItRightML/ruff-report.json" ]; then
+                    sed -i 's|BinItRightML/||g' BinItRightML/ruff-report.json
+                    echo "✅ Ruff paths aligned."
+                  fi
+
+                  # 2. Java (Checkstyle) Path Fix:
+                  # Checkstyle XML uses 'src/main/java/...'. Since our web.sonar.sources 
+                  # is 'src/main/java', we need to make sure the XML matches.
+                  # If the XML has 'BinItRightWebApp/src/main/java', we strip the prefix.
+                  if [ -f "BinItRightWebApp/target/checkstyle-result.xml" ]; then
+                    sed -i 's|BinItRightWebApp/||g' BinItRightWebApp/target/checkstyle-result.xml
+                    echo "✅ Checkstyle paths aligned."
+                  fi
+
+                  # 3. Python Coverage (Keep your existing fix)
                   if [ -f "BinItRightML/coverage.xml" ]; then
                     sed -i 's|<source>.*</source>|<source>.</source>|g' "BinItRightML/coverage.xml"
                   fi
-                  # SARIF (SCA) Path Fixes
+
+                  # 4. SARIF (SCA) Fixes (Keep these)
                   [ -f "BinItRightMobileApp/android-sca.sarif" ] && sed -i 's|"uri": "|"uri": "BinItRightMobileApp/|g' BinItRightMobileApp/android-sca.sarif
                   [ -f "BinItRightWebApp/java-sca.sarif" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/java-sca.sarif
                   [ -f "BinItRightML/python-sca.sarif" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/python-sca.sarif
-                  echo "✅ All paths corrected."
 
             # ==========================================
             # COMPILE & SCAN
