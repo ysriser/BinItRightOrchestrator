@@ -189,70 +189,59 @@ jobs:
           search_artifacts: true
 
       # ==========================================
-      # PATH CORRECTION
+      # PATH CORRECTION & DAST CONVERSION
       # ==========================================
-      - name: Fix Report Paths
+      - name: Fix Report Paths and Convert DAST
         run: |
-          echo "Aligning paths for SonarCloud..."
+          echo "🚀 Starting Path Alignment and DAST Conversion..."
 
-          # 1. Java (Checkstyle)
+          # 1. Define Runner Prefixes (CRITICAL: Define before use)
+          WEB_PREFIX="/home/runner/work/BinItRightWebApp/BinItRightWebApp/"
+          ML_PREFIX="/home/runner/work/BinItRightML/BinItRightML/"
+          MOBILE_PREFIX="/home/runner/work/BinItRightMobileApp/BinItRightMobileApp/"
+
+          # --- 2. Java (Checkstyle, PMD, Selenium) ---
           if [ -d "BinItRightWebApp/target" ]; then
-            find BinItRightWebApp/target -name "*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
+            echo "✅ Aligning Java report paths..."
+            find BinItRightWebApp/target -name "*.xml" -exec sed -i "s|$WEB_PREFIX||g" {} +
           fi
 
-          # --- 2. Python (Ruff/Bandit/Coverage) ---
-          # Define the specific ML prefix
-          ML_PREFIX="/home/runner/work/BinItRightML/BinItRightML/"
-
+          # --- 3. Python (Coverage & Lint) ---
           if [ -f "BinItRightML/coverage.xml" ]; then
             echo "✅ Fixing ML Coverage paths..."
-            # Strip the absolute runner path
             sed -i "s|$ML_PREFIX||g" BinItRightML/coverage.xml
-            # Force the source tag to the current directory relative to the module root
             sed -i 's|<source>.*</source>|<source>.</source>|g' BinItRightML/coverage.xml
           fi
-
           if [ -d "BinItRightML" ]; then
              find BinItRightML -name "*.json" -exec sed -i "s|$ML_PREFIX||g" {} +
           fi
 
-          # 3. Mobile (Android Lint)
-          [ -f "BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml
+          # --- 4. Mobile (Android Lint) ---
+          [ -f "BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml" ] && \
+            sed -i "s|$MOBILE_PREFIX||g" BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml
 
-          # 4. Global SARIF Fix
+          # --- 5. Global SARIF Fix (SAST Results) ---
+          echo "✅ Relativizing SARIF URIs..."
           if [ -f "BinItRightMobileApp/results.sarif" ]; then
             mv BinItRightMobileApp/results.sarif BinItRightMobileApp/android-sast.sarif
           fi
+          # Remove absolute runner paths from all SARIF files
           find . -name "*.sarif" -exec sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "|g' {} +
 
+          # Prepend module names so SonarCloud finds the code in submodules
           [ -d "BinItRightMobileApp" ] && sed -i 's|"uri": "|"uri": "BinItRightMobileApp/|g' BinItRightMobileApp/*.sarif
           [ -d "BinItRightWebApp" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/*.sarif
           [ -d "BinItRightML" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/*.sarif
 
-          # 5. Java Selenium Results Fix
-          if [ -d "BinItRightWebApp/target/failsafe-reports" ]; then
-            echo "✅ Fixing Selenium Result paths..."
-            find BinItRightWebApp/target/failsafe-reports -name "TEST-*.xml" -exec sed -i "s|$WEB_PREFIX||g" {} +
+          # --- 6. DAST Conversion (UI Only) ---
+          echo "✅ Converting DAST format..."
+          if [ -f "BinItRightWebApp/ui-report.json" ]; then
+            python3 zap_to_sonar.py BinItRightWebApp/ui-report.json BinItRightWebApp/java-dast-ui.json BinItRightWebApp
+          else
+            echo "⚠️ ui-report.json not found, check submodule artifacts."
           fi
 
-          echo "Aligning paths and converting DAST format..."
-
-          # 1. Convert Java DAST (Fixes NoSuchFile & IllegalState)
-          python3 zap_to_sonar.py BinItRightWebApp/ui-report.json BinItRightWebApp/java-dast-ui.json BinItRightWebApp
-          python3 zap_to_sonar.py BinItRightWebApp/api-report.json BinItRightWebApp/java-dast-api.json BinItRightWebApp
-
-          # 2. Convert Python DAST (If applicable)
-          python3 zap_to_sonar.py BinItRightML/report_json.json BinItRightML/python-dast.json BinItRightML
-
-          # 3. Align standard Java paths
-          WEB_PREFIX="/home/runner/work/BinItRightWebApp/BinItRightWebApp/"
-          if [ -d "BinItRightWebApp/target" ]; then
-            find BinItRightWebApp/target -name "*.xml" -exec sed -i "s|$WEB_PREFIX||g" {} +
-          fi
-
-          echo "✅ All reports ready."
-
-          echo "✅ Path alignment complete."
+          echo "🎉 All reports aligned and ready for SonarCloud Analysis."
 
       # ==========================================
       # COMPILE & SCAN
