@@ -1,7 +1,7 @@
 name: Unified Coverage & Quality Analysis
 
 on:
-    workflow_dispatch: # Keeping it manual as requested
+    workflow_dispatch:
 
 jobs:
     aggregate:
@@ -40,7 +40,8 @@ jobs:
                   workflow: android_cicd.yml
                   repo: ysriser/BinItRightMobileApp
                   name: android-coverage-reports
-                  path: BinItRightMobileApp/app/build/reports/jacoco
+                  # Explicitly placing the file where sonar-project.properties expects it
+                  path: BinItRightMobileApp/app/build/reports/jacoco/jacocoLocalDebugUnitTestReport/
                   search_artifacts: true
 
             - name: Download Mobile SCA
