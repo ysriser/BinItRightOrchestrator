@@ -88,7 +88,7 @@ jobs:
           path: BinItRightWebApp/target/site/jacoco
           search_artifacts: true
 
-      - name: Download Web Lint (PMD/CPD)
+      - name: Download Web Lint (Checkstyle)
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
         with:
@@ -96,15 +96,15 @@ jobs:
           workflow: pr_validation.yml
           repo: ysriser/BinItRightWebApp
           name: java-lint-reports
-          path: BinItRightWebApp/target/site  # ← Changed to target/site
+          path: BinItRightWebApp/target/
           search_artifacts: true
 
       # Add debug step after download
-      - name: 🔍 Verify PMD Files
+      - name: 🔍 Verify Checkstyle Files
         if: always()
         run: |
-          echo "Looking for PMD files:"
-          find BinItRightWebApp -name "pmd.xml" -o -name "cpd.xml"
+          echo "Looking for Checkstyle files:"
+          find BinItRightWebApp -name "checkstyle-result.xml" -o -name "checkstyle*.xml"
 
       - name: Download Web SAST
         uses: dawidd6/action-download-artifact@v3
@@ -180,7 +180,7 @@ jobs:
         run: |
           echo "Aligning paths for SonarCloud..."
 
-          # 1. Java (PMD/CPD)
+          # 1. Java (Checkstyle)
           if [ -d "BinItRightWebApp/target" ]; then
             find BinItRightWebApp/target -name "*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
           fi
