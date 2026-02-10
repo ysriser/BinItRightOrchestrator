@@ -166,59 +166,57 @@ jobs:
           path: BinItRightML/
           search_artifacts: true
 
-      # ==========================================
-      # PATH CORRECTION & SANITIZATION
-      # ==========================================
+            # ==========================================
+            # PATH CORRECTION & SANITIZATION
+            # ==========================================
       - name: Fix Report Paths
         run: |
-          echo "Aligning paths and sanitizing Selenium reports..."
+            echo "Aligning paths and sanitizing Selenium reports..."
 
-          # 1. Java (PMD/CPD) - Strip absolute paths
-          if [ -d "BinItRightWebApp/target" ]; then
-            find BinItRightWebApp/target -name "*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
-          fi
+            # 1. Java (PMD/CPD)
+            if [ -d "BinItRightWebApp/target" ]; then
+              find BinItRightWebApp/target -name "*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
+            fi
 
-          # 2. Python (Ruff/Bandit/Coverage)
-          [ -f "BinItRightML/ruff-report.json" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/ruff-report.json
-          [ -f "BinItRightML/bandit-results.json" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/bandit-results.json
-          [ -f "BinItRightML/coverage.xml" ] && sed -i 's|<source>.*</source>|<source>.</source>|g' "BinItRightML/coverage.xml"
+            # 2. Python (Ruff/Bandit/Coverage)
+            [ -f "BinItRightML/ruff-report.json" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/ruff-report.json
+            [ -f "BinItRightML/bandit-results.json" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/bandit-results.json
+            [ -f "BinItRightML/coverage.xml" ] && sed -i 's|<source>.*</source>|<source>.</source>|g' "BinItRightML/coverage.xml"
 
-          # 3. Mobile (Android Lint)
-          [ -f "BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml
+            # 3. Mobile (Android Lint)
+            [ -f "BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml
 
-          # 4. Global SARIF Fix
-          if [ -f "BinItRightMobileApp/results.sarif" ]; then
-            mv BinItRightMobileApp/results.sarif BinItRightMobileApp/android-sast.sarif
-          fi
-          find . -name "*.sarif" -exec sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "|g' {} +
+            # 4. Global SARIF Fix
+            if [ -f "BinItRightMobileApp/results.sarif" ]; then
+              mv BinItRightMobileApp/results.sarif BinItRightMobileApp/android-sast.sarif
+            fi
+            find . -name "*.sarif" -exec sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "|g' {} +
+            
+            [ -d "BinItRightMobileApp" ] && sed -i 's|"uri": "|"uri": "BinItRightMobileApp/|g' BinItRightMobileApp/*.sarif
+            [ -d "BinItRightWebApp" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/*.sarif
+            [ -d "BinItRightML" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/*.sarif
 
-          [ -d "BinItRightMobileApp" ] && sed -i 's|"uri": "|"uri": "BinItRightMobileApp/|g' BinItRightMobileApp/*.sarif
-          [ -d "BinItRightWebApp" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/*.sarif
-          [ -d "BinItRightML" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/*.sarif
+            # 5. Selenium JUnit NUCLEAR SANITIZATION (Python)
+            if [ -d "BinItRightWebApp/target/failsafe-reports" ]; then
+              echo "Surgically escaping Selenium XML artifacts..."
+              python3 -c "
+import os, re
+path = 'BinItRightWebApp/target/failsafe-reports'
+if os.path.exists(path):
+for filename in os.listdir(path):
+  if filename.endswith('.xml'):
+      filepath = os.path.join(path, filename)
+      with open(filepath, 'r') as f:
+          content = f.read()
+      sanitized = re.sub(r'=\"(.*?)\"', lambda m: '=\"' + m.group(1).replace('<', '&lt;').replace('>', '&gt;') + '\"', content)
+      with open(filepath, 'w') as f:
+          f.write(sanitized)
+"
+              # Align paths after content is safe
+              find BinItRightWebApp/target/failsafe-reports -name "TEST-*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
+            fi
 
-          # 5. Selenium JUnit NUCLEAR SANITIZATION (Python)
-          # This specifically targets raw '<' inside attributes while preserving tag integrity
-          if [ -d "BinItRightWebApp/target/failsafe-reports" ]; then
-            echo "Surgically escaping Selenium XML artifacts..."
-            python3 -c "
-            import os, re
-            path = 'BinItRightWebApp/target/failsafe-reports'
-            if os.path.exists(path):
-                for filename in os.listdir(path):
-                    if filename.endswith('.xml'):
-                        filepath = os.path.join(path, filename)
-                        with open(filepath, 'r') as f:
-                            content = f.read()
-                        # Escape '<' and '>' ONLY when found inside attribute quotes
-                        sanitized = re.sub(r'=\"(.*?)\"', lambda m: '=\"' + m.group(1).replace('<', '&lt;').replace('>', '&gt;') + '\"', content)
-                        with open(filepath, 'w') as f:
-                            f.write(sanitized)
-                                "
-                                # Align paths after content is safe
-                                find BinItRightWebApp/target/failsafe-reports -name "TEST-*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
-                              fi
-
-                              echo "✅ Path alignment and sanitization complete."
+            echo "✅ Path alignment and sanitization complete."
 
       # ==========================================
       # COMPILE & SCAN
