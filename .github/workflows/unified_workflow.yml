@@ -159,6 +159,11 @@ jobs:
                   chmod +x mvnw
                   ./mvnw compile test-compile dependency:copy-dependencies -DskipTests
 
+            - name: Debug File Paths
+              run: |
+                  echo "--- Checking for Android XML ---"
+                  find BinItRightMobileApp -name "*.xml" | grep jacoco
+
             - name: Run SonarCloud Analysis
               uses: SonarSource/sonarqube-scan-action@v5.0.0
               env:
