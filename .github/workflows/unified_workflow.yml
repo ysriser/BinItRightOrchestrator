@@ -126,7 +126,7 @@ jobs:
         continue-on-error: true
         with:
           github_token: ${{ secrets.GH_PAT }}
-          workflow: master_deployment.yml
+          workflow: master_deploy.yml
           repo: ysriser/BinItRightWebApp
           name: java-selenium-results
           path: BinItRightWebApp/target/site/jacoco-it/
@@ -137,7 +137,7 @@ jobs:
         continue-on-error: true
         with:
           github_token: ${{ secrets.GH_PAT }}
-          workflow: master_deployment.yml
+          workflow: master_deploy.yml
           repo: ysriser/BinItRightWebApp
           name: java-dast-results
           path: BinItRightWebApp/
@@ -238,23 +238,23 @@ jobs:
           [ -d "BinItRightWebApp" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/*.sarif
           [ -d "BinItRightML" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/*.sarif
 
-          # Selenium Coverage Path Fix
+          # 5. Java Selenium Results Fix
+          if [ -d "BinItRightWebApp/target/failsafe-reports" ]; then
+            echo "✅ Fixing Selenium Result paths..."
+            find BinItRightWebApp/target/failsafe-reports -name "TEST-*.xml" -exec sed -i "s|$WEB_PREFIX||g" {} +
+          fi
+
+          # 6. Selenium Coverage Path Fix
           SEL_COV="BinItRightWebApp/target/site/jacoco-it/jacoco.xml"
           if [ -f "$SEL_COV" ]; then
             echo "✅ Fixing Selenium Coverage paths..."
             sed -i "s|$WEB_PREFIX||g" "$SEL_COV"
           fi
 
-          # 7. Java DAST Dual-Mapping
-          # Move UI report out of its folder and rename
-          if [ -f "BinItRightWebApp/zap-ui-report/report_json.json" ]; then
-            mv BinItRightWebApp/zap-ui-report/report_json.json BinItRightWebApp/java-dast-ui.json
-          fi
-
-          # Move API report out of its folder and rename
-          if [ -f "BinItRightWebApp/zap-api-report/report_json.json" ]; then
-            mv BinItRightWebApp/zap-api-report/report_json.json BinItRightWebApp/java-dast-api.json
-          fi
+          # --- 7. Java DAST Dual-Mapping ---
+          # Files land directly in the submodule folder as named in the upload
+          [ -f "BinItRightWebApp/ui-report.json" ] && mv BinItRightWebApp/ui-report.json BinItRightWebApp/java-dast-ui.json
+          [ -f "BinItRightWebApp/api-report.json" ] && mv BinItRightWebApp/api-report.json BinItRightWebApp/java-dast-api.json
 
           echo "✅ Path alignment complete."
 
