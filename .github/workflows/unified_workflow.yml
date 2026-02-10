@@ -28,10 +28,10 @@ jobs:
           python-version: "3.11"
 
       # ==========================================
-      # DOWNLOAD ALL ARTIFACTS
+      # STEP-BY-STEP ARTIFACT DOWNLOADS
       # ==========================================
 
-      # --- MOBILE MODULE ---
+      # --- MOBILE (Android) ---
       - name: Download Mobile Coverage
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
@@ -65,7 +65,7 @@ jobs:
           path: BinItRightMobileApp/
           search_artifacts: true
 
-      - name: Download Mobile SCA (Trivy)
+      - name: Download Mobile SCA
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
         with:
@@ -76,7 +76,7 @@ jobs:
           path: BinItRightMobileApp/
           search_artifacts: true
 
-      # --- WEB MODULE ---
+      # --- WEB (Java Spring) ---
       - name: Download Web Coverage
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
@@ -88,7 +88,7 @@ jobs:
           path: BinItRightWebApp/target/site/jacoco
           search_artifacts: true
 
-      - name: Download Web Lint (Checkstyle)
+      - name: Download Web Lint (PMD/CPD)
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
         with:
@@ -99,7 +99,7 @@ jobs:
           path: BinItRightWebApp/target/
           search_artifacts: true
 
-      - name: Download Web SAST (Semgrep)
+      - name: Download Web SAST
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
         with:
@@ -110,7 +110,7 @@ jobs:
           path: BinItRightWebApp/
           search_artifacts: true
 
-      - name: Download Web SCA (Trivy)
+      - name: Download Web SCA
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
         with:
@@ -118,25 +118,11 @@ jobs:
           workflow: pr_validation.yml
           repo: ysriser/BinItRightWebApp
           name: java-sca-results
-          path: BinItRightWebApp/
+          path: BinItRightWebApp/target/
           search_artifacts: true
 
-      # --- DOWNLOAD WEB SELENIUM RESULTS ---
-      - name: Download Web Selenium Tests
-        uses: dawidd6/action-download-artifact@v3
-        continue-on-error: true
-        with:
-          github_token: ${{ secrets.GH_PAT }}
-          workflow: master_deploy.yml
-          repo: ysriser/BinItRightWebApp
-          name: java-selenium-results
-          path: BinItRightWebApp/target/failsafe-reports/
-          search_artifacts: true
-          run_conclusion: "" # This allows: success, failure, neutral, cancelled, timed_out, action_required
-          if_no_artifact_found: warn
-
-      # --- ML MODULE ---
-      - name: Download ML Coverage
+      # --- ML (Python) ---
+      - name: Download ML Coverage/Lint
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
         with:
@@ -147,18 +133,7 @@ jobs:
           path: BinItRightML/
           search_artifacts: true
 
-      - name: Download ML Lint (Ruff)
-        uses: dawidd6/action-download-artifact@v3
-        continue-on-error: true
-        with:
-          github_token: ${{ secrets.GH_PAT }}
-          workflow: pr_validation.yml
-          repo: ysriser/BinItRightML
-          name: python-lint-reports
-          path: BinItRightML/
-          search_artifacts: true
-
-      - name: Download ML SAST (Bandit)
+      - name: Download ML SAST
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
         with:
@@ -169,7 +144,7 @@ jobs:
           path: BinItRightML/
           search_artifacts: true
 
-      - name: Download ML SCA (Trivy)
+      - name: Download ML SCA
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
         with:
@@ -181,55 +156,36 @@ jobs:
           search_artifacts: true
 
       # ==========================================
-      # PATH CORRECTION (FINAL UNIFIED VERSION)
+      # PATH CORRECTION
       # ==========================================
       - name: Fix Report Paths
         run: |
-          echo "Aligning external report paths with Orchestrator structure..."
+          echo "Aligning paths for SonarCloud..."
 
-          # 1. Java (Checkstyle) Fix
-          # Strips the absolute runner path so issues map to the 'web' module root
-          if [ -f "BinItRightWebApp/target/checkstyle-result.xml" ]; then
-            sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightWebApp/target/checkstyle-result.xml
-            echo "✅ Checkstyle paths rewritten."
+          # 1. Java (PMD/CPD)
+          if [ -d "BinItRightWebApp/target" ]; then
+            find BinItRightWebApp/target -name "*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
           fi
 
-          # 2. Python (Ruff/Bandit) Fix
-          # Strips the absolute runner path so issues map to the 'ml' module root
+          # 2. Python (Ruff/Bandit/Coverage)
           [ -f "BinItRightML/ruff-report.json" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/ruff-report.json
           [ -f "BinItRightML/bandit-results.json" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/bandit-results.json
+          [ -f "BinItRightML/coverage.xml" ] && sed -i 's|<source>.*</source>|<source>.</source>|g' "BinItRightML/coverage.xml"
 
-          # 3. Mobile (Android Lint) Fix
-          # Strips the absolute runner path so issues map to the 'mobile' module root
+          # 3. Mobile (Android Lint)
           [ -f "BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml
 
-          # 4. Python Coverage Fix
-          # Corrects the internal <source> tag to match the Orchestrator environment
-          if [ -f "BinItRightML/coverage.xml" ]; then
-            sed -i 's|<source>.*</source>|<source>.</source>|g' "BinItRightML/coverage.xml"
-          fi
-
-          # 5. Global SARIF Fix (SCA, Semgrep, MobSF)
-          # Handle MobSF rename first to match sonar-project.properties
+          # 4. Global SARIF Fix
           if [ -f "BinItRightMobileApp/results.sarif" ]; then
             mv BinItRightMobileApp/results.sarif BinItRightMobileApp/android-sast.sarif
           fi
-
-          # Strip absolute paths and re-prefix with Orchestrator module names
           find . -name "*.sarif" -exec sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "|g' {} +
 
           [ -d "BinItRightMobileApp" ] && sed -i 's|"uri": "|"uri": "BinItRightMobileApp/|g' BinItRightMobileApp/*.sarif
           [ -d "BinItRightWebApp" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/*.sarif
           [ -d "BinItRightML" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/*.sarif
 
-          # 6. Selenium JUnit Path Fix
-          # Maps external E2E test results to the correct files in the Web module
-          if [ -d "BinItRightWebApp/target/failsafe-reports" ]; then
-            find BinItRightWebApp/target/failsafe-reports -name "TEST-*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
-            echo "✅ Selenium test paths aligned."
-          fi
-
-          echo "✅ All paths aligned for SonarCloud Analysis."
+          echo "✅ Path alignment complete."
 
       # ==========================================
       # COMPILE & SCAN
