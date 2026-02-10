@@ -40,8 +40,8 @@ jobs:
                   workflow: android_cicd.yml
                   repo: ysriser/BinItRightMobileApp
                   name: android-coverage-reports
-                  # Explicitly placing the file where sonar-project.properties expects it
-                  path: BinItRightMobileApp/app/build/reports/jacoco/jacocoLocalDebugUnitTestReport/
+                  # Change this to just the module root
+                  path: BinItRightMobileApp/
                   search_artifacts: true
 
             - name: Download Mobile SCA
