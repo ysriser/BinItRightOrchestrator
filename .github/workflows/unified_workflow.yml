@@ -173,7 +173,7 @@ jobs:
         run: |
           echo "Aligning paths and sanitizing reports..."
 
-          # 1. Java (PMD/CPD/Checkstyle)
+          # 1. Java (PMD/CPD)
           if [ -d "BinItRightWebApp/target" ]; then
             find BinItRightWebApp/target -name "*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
           fi
@@ -186,7 +186,7 @@ jobs:
           # 3. Mobile (Android Lint)
           [ -f "BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml
 
-          # 4. Global SARIF
+          # 4. Global SARIF Fix
           if [ -f "BinItRightMobileApp/results.sarif" ]; then
             mv BinItRightMobileApp/results.sarif BinItRightMobileApp/android-sast.sarif
           fi
@@ -196,14 +196,14 @@ jobs:
           [ -d "BinItRightWebApp" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/*.sarif
           [ -d "BinItRightML" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/*.sarif
 
-          # 5. Selenium JUnit Sanitization & Path Fix
+          # 5. Selenium JUnit Surgical Sanitization
           if [ -d "BinItRightWebApp/target/failsafe-reports" ]; then
-            echo "Sanitizing and aligning Selenium XMLs..."
-            # Strip problematic characters that crash the parser
-            find BinItRightWebApp/target/failsafe-reports -name "TEST-*.xml" -exec sed -i 's/[<>]//g' {} +
-            # Align paths
+            echo "Surgically cleaning Selenium XMLs..."
+            find BinItRightWebApp/target/failsafe-reports -name "TEST-*.xml" -exec sed -i 's/<\([^?\/!A-Za-z]\)/ \1/g' {} +
             find BinItRightWebApp/target/failsafe-reports -name "TEST-*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
           fi
+
+          echo "✅ Cleanup complete."
 
       # ==========================================
       # COMPILE & SCAN
