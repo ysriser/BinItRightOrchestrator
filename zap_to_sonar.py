@@ -17,7 +17,7 @@ def convert_zap_to_sonar(input_path, output_path, project_dir):
             sonar_issues["issues"].append({
                 "engineId": "OWASP-ZAP",
                 "ruleId": alert.get('pluginid', 'zap-vulnerability'),
-                "severity": severity_map.get(alert.get('riskcode'), "HIGH"),
+                "severity": severity_map.get(alert.get('riskcode'), "MAJOR"), # Default to MAJOR if unknown
                 "type": "VULNERABILITY",
                 "primaryLocation": {
                     "message": f"{alert.get('alert')}: {alert.get('desc')[:500]}",
