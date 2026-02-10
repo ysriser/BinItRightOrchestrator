@@ -1,7 +1,7 @@
 name: Unified Coverage & Quality Analysis
 
 on:
-    workflow_dispatch:
+    workflow_dispatch: # Keeping it manual as requested
 
 jobs:
     aggregate:
@@ -28,8 +28,10 @@ jobs:
                   python-version: "3.11"
 
             # ==========================================
-            # DOWNLOAD ALL ARTIFACTS (Coverage + SCA)
+            # DOWNLOAD INDIVIDUAL ARTIFACTS
             # ==========================================
+
+            # --- MOBILE MODULE ---
             - name: Download Mobile Coverage
               uses: dawidd6/action-download-artifact@v3
               continue-on-error: true
@@ -52,6 +54,18 @@ jobs:
                   path: BinItRightMobileApp/
                   search_artifacts: true
 
+            - name: Download Mobile Lint
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: android_cicd.yml
+                  repo: ysriser/BinItRightMobileApp
+                  name: android-lint-reports
+                  path: BinItRightMobileApp/app/build/reports/
+                  search_artifacts: true
+
+            # --- WEB MODULE ---
             - name: Download Web Coverage
               uses: dawidd6/action-download-artifact@v3
               continue-on-error: true
@@ -74,6 +88,18 @@ jobs:
                   path: BinItRightWebApp/
                   search_artifacts: true
 
+            - name: Download Web Lint
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: pr_validation.yml
+                  repo: ysriser/BinItRightWebApp
+                  name: java-lint-reports
+                  path: BinItRightWebApp/target/
+                  search_artifacts: true
+
+            # --- ML MODULE ---
             - name: Download ML Coverage
               uses: dawidd6/action-download-artifact@v3
               continue-on-error: true
@@ -96,25 +122,32 @@ jobs:
                   path: BinItRightML/
                   search_artifacts: true
 
+            - name: Download ML Lint
+              uses: dawidd6/action-download-artifact@v3
+              continue-on-error: true
+              with:
+                  github_token: ${{ secrets.GH_PAT }}
+                  workflow: pr_validation.yml
+                  repo: ysriser/BinItRightML
+                  name: python-lint-reports
+                  path: BinItRightML/
+                  search_artifacts: true
+
             # ==========================================
-            # PATH CORRECTION (Coverage & SCA)
+            # PATH CORRECTION
             # ==========================================
             - name: Fix Report Paths
               run: |
-                  echo "Correcting paths for multi-repo structure..."
-
-                  # 1. Python Coverage Fix
+                  echo "Fixing paths for multi-repo indexing..."
+                  # Python Coverage Fix
                   if [ -f "BinItRightML/coverage.xml" ]; then
                     sed -i 's|<source>.*</source>|<source>.</source>|g' "BinItRightML/coverage.xml"
-                    echo "✅ ML coverage paths set to relative."
                   fi
-
-                  # 2. SARIF (SCA) Path Fixes
-                  # Replaces internal "uri": "file" with "uri": "Module/file"
+                  # SARIF (SCA) Path Fixes
                   [ -f "BinItRightMobileApp/android-sca.sarif" ] && sed -i 's|"uri": "|"uri": "BinItRightMobileApp/|g' BinItRightMobileApp/android-sca.sarif
                   [ -f "BinItRightWebApp/java-sca.sarif" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/java-sca.sarif
                   [ -f "BinItRightML/python-sca.sarif" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/python-sca.sarif
-                  echo "✅ SARIF paths corrected."
+                  echo "✅ All paths corrected."
 
             # ==========================================
             # COMPILE & SCAN
@@ -123,7 +156,6 @@ jobs:
               run: |
                   cd BinItRightWebApp
                   chmod +x mvnw
-                  # Compiling without 'clean' to keep downloaded reports safe
                   ./mvnw compile test-compile dependency:copy-dependencies -DskipTests
 
             - name: Run SonarCloud Analysis
