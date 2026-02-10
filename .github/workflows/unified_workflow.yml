@@ -28,7 +28,7 @@ jobs:
           python-version: "3.11"
 
       # ==========================================
-      # STEP-BY-STEP RESILIENT DOWNLOADS
+      # INDIVIDUAL ARTIFACT DOWNLOADS
       # ==========================================
 
       # --- MOBILE ---
@@ -41,7 +41,6 @@ jobs:
           repo: ysriser/BinItRightMobileApp
           name: android-coverage-reports
           path: BinItRightMobileApp/app/build/reports/jacoco/jacocoLocalDebugUnitTestReport/
-          run_conclusion: ""
           search_artifacts: true
 
       - name: Download Mobile Lint
@@ -53,7 +52,6 @@ jobs:
           repo: ysriser/BinItRightMobileApp
           name: android-lint-reports
           path: BinItRightMobileApp/app/build/reports/
-          run_conclusion: ""
           search_artifacts: true
 
       - name: Download Mobile SAST
@@ -65,7 +63,6 @@ jobs:
           repo: ysriser/BinItRightMobileApp
           name: android-sast-results
           path: BinItRightMobileApp/
-          run_conclusion: ""
           search_artifacts: true
 
       - name: Download Mobile SCA
@@ -77,7 +74,6 @@ jobs:
           repo: ysriser/BinItRightMobileApp
           name: android-sca-results
           path: BinItRightMobileApp/
-          run_conclusion: ""
           search_artifacts: true
 
       # --- WEB ---
@@ -90,7 +86,6 @@ jobs:
           repo: ysriser/BinItRightWebApp
           name: java-coverage-reports
           path: BinItRightWebApp/target/site/jacoco
-          run_conclusion: ""
           search_artifacts: true
 
       - name: Download Web Lint (PMD/CPD)
@@ -102,7 +97,6 @@ jobs:
           repo: ysriser/BinItRightWebApp
           name: java-lint-reports
           path: BinItRightWebApp/target/
-          run_conclusion: ""
           search_artifacts: true
 
       - name: Download Web SAST
@@ -114,7 +108,6 @@ jobs:
           repo: ysriser/BinItRightWebApp
           name: java-sast-results
           path: BinItRightWebApp/
-          run_conclusion: ""
           search_artifacts: true
 
       - name: Download Web SCA
@@ -126,7 +119,6 @@ jobs:
           repo: ysriser/BinItRightWebApp
           name: java-sca-results
           path: BinItRightWebApp/target/
-          run_conclusion: ""
           search_artifacts: true
 
       - name: Download Web Selenium
@@ -134,11 +126,10 @@ jobs:
         continue-on-error: true
         with:
           github_token: ${{ secrets.GH_PAT }}
-          workflow: Master Deployment
+          workflow: master_deploy.yml
           repo: ysriser/BinItRightWebApp
           name: java-selenium-results
           path: BinItRightWebApp/target/failsafe-reports/
-          run_conclusion: ""
           search_artifacts: true
 
       # --- ML ---
@@ -147,11 +138,10 @@ jobs:
         continue-on-error: true
         with:
           github_token: ${{ secrets.GH_PAT }}
-          workflow: Python PR Validation (Quality Gates)
+          workflow: pr_validation.yml
           repo: ysriser/BinItRightML
           name: python-coverage-reports
           path: BinItRightML/
-          run_conclusion: ""
           search_artifacts: true
 
       - name: Download ML SAST
@@ -159,11 +149,10 @@ jobs:
         continue-on-error: true
         with:
           github_token: ${{ secrets.GH_PAT }}
-          workflow: Python PR Validation (Quality Gates)
+          workflow: pr_validation.yml
           repo: ysriser/BinItRightML
           name: python-sast-results
           path: BinItRightML/
-          run_conclusion: ""
           search_artifacts: true
 
       - name: Download ML SCA
@@ -171,11 +160,10 @@ jobs:
         continue-on-error: true
         with:
           github_token: ${{ secrets.GH_PAT }}
-          workflow: Python PR Validation (Quality Gates)
+          workflow: pr_validation.yml
           repo: ysriser/BinItRightML
           name: python-sca-results
           path: BinItRightML/
-          run_conclusion: ""
           search_artifacts: true
 
       # ==========================================
@@ -205,4 +193,34 @@ jobs:
           find . -name "*.sarif" -exec sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "|g' {} +
 
           [ -d "BinItRightMobileApp" ] && sed -i 's|"uri": "|"uri": "BinItRightMobileApp/|g' BinItRightMobileApp/*.sarif
-          [ -d "BinItRightWebApp" ] && sed -i '
+          [ -d "BinItRightWebApp" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/*.sarif
+          [ -d "BinItRightML" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/*.sarif
+
+          # 5. Selenium JUnit Sanitization & Path Fix
+          if [ -d "BinItRightWebApp/target/failsafe-reports" ]; then
+            echo "Sanitizing and aligning Selenium XMLs..."
+            # Strip problematic characters that crash the parser
+            find BinItRightWebApp/target/failsafe-reports -name "TEST-*.xml" -exec sed -i 's/[<>]//g' {} +
+            # Align paths
+            find BinItRightWebApp/target/failsafe-reports -name "TEST-*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
+          fi
+
+      # ==========================================
+      # COMPILE & SCAN
+      # ==========================================
+      - name: Compile Java Web App
+        run: |
+          cd BinItRightWebApp
+          chmod +x mvnw
+          ./mvnw compile test-compile dependency:copy-dependencies -DskipTests
+
+      - name: Run SonarCloud Analysis
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.verbose=true
+            -Dsonar.projectKey=ysriser_BinItRightOrchestrator
+            -Dsonar.organization=ysriser
