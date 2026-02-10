@@ -178,10 +178,21 @@ jobs:
             find BinItRightWebApp/target -name "*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
           fi
 
-          # 2. Python (Ruff/Bandit/Coverage)
-          [ -f "BinItRightML/ruff-report.json" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/ruff-report.json
-          [ -f "BinItRightML/bandit-results.json" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/bandit-results.json
-          [ -f "BinItRightML/coverage.xml" ] && sed -i 's|<source>.*</source>|<source>.</source>|g' "BinItRightML/coverage.xml"
+          # --- 2. Python (Ruff/Bandit/Coverage) ---
+          # Define the specific ML prefix
+          ML_PREFIX="/home/runner/work/BinItRightML/BinItRightML/"
+
+          if [ -f "BinItRightML/coverage.xml" ]; then
+            echo "✅ Fixing ML Coverage paths..."
+            # Strip the absolute runner path
+            sed -i "s|$ML_PREFIX||g" BinItRightML/coverage.xml
+            # Force the source tag to the current directory relative to the module root
+            sed -i 's|<source>.*</source>|<source>.</source>|g' BinItRightML/coverage.xml
+          fi
+
+          if [ -d "BinItRightML" ]; then
+             find BinItRightML -name "*.json" -exec sed -i "s|$ML_PREFIX||g" {} +
+          fi
 
           # 3. Mobile (Android Lint)
           [ -f "BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml
