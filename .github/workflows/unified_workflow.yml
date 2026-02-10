@@ -237,26 +237,21 @@ jobs:
 
           echo "Aligning paths and converting DAST format..."
 
+      - name: Fix Reports and Convert DAST
+        run: |
+          echo "Converting DAST formats for SonarCloud..."
+
           # 1. Convert Java UI DAST
-          if [ -f "BinItRightWebApp/ui-report.json" ]; then
-            python3 zap_to_sonar.py BinItRightWebApp/ui-report.json BinItRightWebApp/java-dast-ui.json BinItRightWebApp
-          fi
+          python3 zap_to_sonar.py BinItRightWebApp/ui-report.json BinItRightWebApp/java-dast-ui.json BinItRightWebApp
 
           # 2. Convert Java API DAST
-          if [ -f "BinItRightWebApp/api-report.json" ]; then
-            python3 zap_to_sonar.py BinItRightWebApp/api-report.json BinItRightWebApp/java-dast-api.json BinItRightWebApp
-          fi
+          python3 zap_to_sonar.py BinItRightWebApp/api-report.json BinItRightWebApp/java-dast-api.json BinItRightWebApp
 
           # 3. Align standard Java paths (Existing logic)
           WEB_PREFIX="/home/runner/work/BinItRightWebApp/BinItRightWebApp/"
           if [ -d "BinItRightWebApp/target" ]; then
             find BinItRightWebApp/target -name "*.xml" -exec sed -i "s|$WEB_PREFIX||g" {} +
           fi
-
-          # --- 7. Java DAST Dual-Mapping ---
-          # Files land directly in the submodule folder as named in the upload
-          [ -f "BinItRightWebApp/ui-report.json" ] && mv BinItRightWebApp/ui-report.json BinItRightWebApp/java-dast-ui.json
-          [ -f "BinItRightWebApp/api-report.json" ] && mv BinItRightWebApp/api-report.json BinItRightWebApp/java-dast-api.json
 
           echo "✅ Path alignment complete."
 
