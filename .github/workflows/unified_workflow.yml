@@ -132,6 +132,8 @@ jobs:
           name: java-selenium-results
           path: BinItRightWebApp/target/failsafe-reports/
           search_artifacts: true
+          run_conclusion: "" # This allows: success, failure, neutral, cancelled, timed_out, action_required
+          if_no_artifact_found: warn
 
       # --- ML MODULE ---
       - name: Download ML Coverage
