@@ -243,10 +243,16 @@ jobs:
             sed -i "s|$WEB_PREFIX||g" "$SEL_COV"
           fi
 
-          # DAST Mapping
-          # We rename the generic 'report_json.json' to something Sonar expects
-          [ -f "BinItRightWebApp/report_json.json" ] && mv BinItRightWebApp/report_json.json BinItRightWebApp/java-dast.json
-          [ -f "BinItRightML/report_json.json" ] && mv BinItRightML/report_json.json BinItRightML/python-dast.json
+          # 7. Java DAST Dual-Mapping
+          # Move UI report out of its folder and rename
+          if [ -f "BinItRightWebApp/zap-ui-report/report_json.json" ]; then
+            mv BinItRightWebApp/zap-ui-report/report_json.json BinItRightWebApp/java-dast-ui.json
+          fi
+
+          # Move API report out of its folder and rename
+          if [ -f "BinItRightWebApp/zap-api-report/report_json.json" ]; then
+            mv BinItRightWebApp/zap-api-report/report_json.json BinItRightWebApp/java-dast-api.json
+          fi
 
           echo "✅ Path alignment complete."
 
