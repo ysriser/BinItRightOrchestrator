@@ -28,39 +28,130 @@ jobs:
           python-version: "3.11"
 
       # ==========================================
-      # ARTIFACT DOWNLOADS (EXCLUDING SELENIUM)
+      # STEP-BY-STEP ARTIFACT DOWNLOADS
       # ==========================================
 
-      # --- MOBILE ---
-      - name: Download Mobile Reports
+      # --- MOBILE (Android) ---
+      - name: Download Mobile Coverage
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
         with:
           github_token: ${{ secrets.GH_PAT }}
           workflow: android_cicd.yml
           repo: ysriser/BinItRightMobileApp
+          name: android-coverage-reports
+          path: BinItRightMobileApp/app/build/reports/jacoco/jacocoLocalDebugUnitTestReport/
+          search_artifacts: true
+
+      - name: Download Mobile Lint
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: android_cicd.yml
+          repo: ysriser/BinItRightMobileApp
+          name: android-lint-reports
+          path: BinItRightMobileApp/app/build/reports/
+          search_artifacts: true
+
+      - name: Download Mobile SAST
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: android_cicd.yml
+          repo: ysriser/BinItRightMobileApp
+          name: android-sast-results
           path: BinItRightMobileApp/
           search_artifacts: true
 
-      # --- WEB ---
-      - name: Download Web Reports
+      - name: Download Mobile SCA
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: android_cicd.yml
+          repo: ysriser/BinItRightMobileApp
+          name: android-sca-results
+          path: BinItRightMobileApp/
+          search_artifacts: true
+
+      # --- WEB (Java Spring) ---
+      - name: Download Web Coverage
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
         with:
           github_token: ${{ secrets.GH_PAT }}
           workflow: pr_validation.yml
           repo: ysriser/BinItRightWebApp
+          name: java-coverage-reports
+          path: BinItRightWebApp/target/site/jacoco
+          search_artifacts: true
+
+      - name: Download Web Lint (PMD/CPD)
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: pr_validation.yml
+          repo: ysriser/BinItRightWebApp
+          name: java-lint-reports
+          path: BinItRightWebApp/target/
+          search_artifacts: true
+
+      - name: Download Web SAST
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: pr_validation.yml
+          repo: ysriser/BinItRightWebApp
+          name: java-sast-results
           path: BinItRightWebApp/
           search_artifacts: true
 
-      # --- ML ---
-      - name: Download ML Reports
+      - name: Download Web SCA
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: pr_validation.yml
+          repo: ysriser/BinItRightWebApp
+          name: java-sca-results
+          path: BinItRightWebApp/target/
+          search_artifacts: true
+
+      # --- ML (Python) ---
+      - name: Download ML Coverage/Lint
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
         with:
           github_token: ${{ secrets.GH_PAT }}
           workflow: pr_validation.yml
           repo: ysriser/BinItRightML
+          name: python-coverage-reports
+          path: BinItRightML/
+          search_artifacts: true
+
+      - name: Download ML SAST
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: pr_validation.yml
+          repo: ysriser/BinItRightML
+          name: python-sast-results
+          path: BinItRightML/
+          search_artifacts: true
+
+      - name: Download ML SCA
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: pr_validation.yml
+          repo: ysriser/BinItRightML
+          name: python-sca-results
           path: BinItRightML/
           search_artifacts: true
 
