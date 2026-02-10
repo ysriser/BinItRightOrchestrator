@@ -121,6 +121,17 @@ jobs:
           path: BinItRightWebApp/target/
           search_artifacts: true
 
+      - name: Download Selenium Coverage
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: master_deployment.yml
+          repo: ysriser/BinItRightWebApp
+          name: selenium-coverage-report
+          path: BinItRightWebApp/target/site/jacoco-it/
+          search_artifacts: true
+
       # --- ML (Python) ---
       - name: Download ML Coverage/Lint
         uses: dawidd6/action-download-artifact@v3
@@ -206,6 +217,13 @@ jobs:
           [ -d "BinItRightMobileApp" ] && sed -i 's|"uri": "|"uri": "BinItRightMobileApp/|g' BinItRightMobileApp/*.sarif
           [ -d "BinItRightWebApp" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/*.sarif
           [ -d "BinItRightML" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/*.sarif
+
+          # Selenium Coverage Path Fix ---
+          SEL_COV="BinItRightWebApp/target/site/jacoco-it/jacoco.xml"
+          if [ -f "$SEL_COV" ]; then
+            echo "✅ Fixing Selenium Coverage paths..."
+            sed -i "s|$WEB_PREFIX||g" "$SEL_COV"
+          fi
 
           echo "✅ Path alignment complete."
 
