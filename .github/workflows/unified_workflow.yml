@@ -128,7 +128,7 @@ jobs:
           github_token: ${{ secrets.GH_PAT }}
           workflow: master_deployment.yml
           repo: ysriser/BinItRightWebApp
-          name: selenium-coverage-report
+          name: java-selenium-results
           path: BinItRightWebApp/target/site/jacoco-it/
           search_artifacts: true
 
