@@ -10,10 +10,10 @@ def convert_zap_to_sonar(input_path, output_path, project_dir):
     
     sonar_issues = {"issues": []}
     
-    # 1. Map for the old 'severity' field (Required by your current scanner)
+    # 1. Map for the old 'severity' field (Strictly CRITICAL, MAJOR, MINOR, INFO)
     old_severity_map = {"3": "CRITICAL", "2": "MAJOR", "1": "MINOR", "0": "INFO"}
     
-    # 2. Map for the new 'impacts' field (Required for the new format)
+    # 2. Map for the new 'impacts' field (BLOCKER, HIGH, MEDIUM, LOW, INFO)
     new_impact_map = {"3": "HIGH", "2": "MEDIUM", "1": "LOW", "0": "INFO"}
 
     for site in zap_data.get('site', []):
@@ -23,8 +23,12 @@ def convert_zap_to_sonar(input_path, output_path, project_dir):
             sonar_issues["issues"].append({
                 "engineId": "OWASP-ZAP",
                 "ruleId": alert.get('pluginid', 'zap-vulnerability'),
-                # HYBRID FIX: Provide BOTH fields
-                "severity": old_severity_map.get(risk_code, "MAJOR"), 
+                # MANDATORY FIELDS for current SonarScanner validator
+                "type": "VULNERABILITY", # This fixes the 'missing type' error
+                "severity": old_severity_map.get(risk_code, "MAJOR"), # Validated constants
+                
+                # MODERN FIELDS for future-proofing and Clean Code metrics
+                "cleanCodeAttribute": "TRUSTWORTHY",
                 "impacts": [
                     {
                         "softwareQuality": "SECURITY",
@@ -39,7 +43,7 @@ def convert_zap_to_sonar(input_path, output_path, project_dir):
 
     with open(output_path, 'w') as f:
         json.dump(sonar_issues, f, indent=2)
-    print(f"✅ Created Hybrid Report: {output_path}")
+    print(f"✅ Created Final Hybrid Report: {output_path}")
 
 if __name__ == "__main__":
     convert_zap_to_sonar(sys.argv[1], sys.argv[2], sys.argv[3])
