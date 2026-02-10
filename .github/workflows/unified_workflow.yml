@@ -95,8 +95,15 @@ jobs:
           workflow: pr_validation.yml
           repo: ysriser/BinItRightWebApp
           name: java-lint-reports
-          path: BinItRightWebApp/target/
+          path: BinItRightWebApp/target/site  # ← Changed to target/site
           search_artifacts: true
+
+      # Add debug step after download
+      - name: 🔍 Verify PMD Files
+        if: always()
+        run: |
+          echo "Looking for PMD files:"
+          find BinItRightWebApp -name "pmd.xml" -o -name "cpd.xml"
 
       - name: Download Web SAST
         uses: dawidd6/action-download-artifact@v3
