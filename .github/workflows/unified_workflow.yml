@@ -28,195 +28,73 @@ jobs:
           python-version: "3.11"
 
       # ==========================================
-      # STEP-BY-STEP ARTIFACT DOWNLOADS
+      # ARTIFACT DOWNLOADS (EXCLUDING SELENIUM)
       # ==========================================
 
-      # --- MOBILE (Android) ---
-      - name: Download Mobile Coverage
+      # --- MOBILE ---
+      - name: Download Mobile Reports
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
         with:
           github_token: ${{ secrets.GH_PAT }}
           workflow: android_cicd.yml
           repo: ysriser/BinItRightMobileApp
-          name: android-coverage-reports
-          path: BinItRightMobileApp/app/build/reports/jacoco/jacocoLocalDebugUnitTestReport/
-          search_artifacts: true
-
-      - name: Download Mobile Lint
-        uses: dawidd6/action-download-artifact@v3
-        continue-on-error: true
-        with:
-          github_token: ${{ secrets.GH_PAT }}
-          workflow: android_cicd.yml
-          repo: ysriser/BinItRightMobileApp
-          name: android-lint-reports
-          path: BinItRightMobileApp/app/build/reports/
-          search_artifacts: true
-
-      - name: Download Mobile SAST
-        uses: dawidd6/action-download-artifact@v3
-        continue-on-error: true
-        with:
-          github_token: ${{ secrets.GH_PAT }}
-          workflow: android_cicd.yml
-          repo: ysriser/BinItRightMobileApp
-          name: android-sast-results
           path: BinItRightMobileApp/
           search_artifacts: true
 
-      - name: Download Mobile SCA
-        uses: dawidd6/action-download-artifact@v3
-        continue-on-error: true
-        with:
-          github_token: ${{ secrets.GH_PAT }}
-          workflow: android_cicd.yml
-          repo: ysriser/BinItRightMobileApp
-          name: android-sca-results
-          path: BinItRightMobileApp/
-          search_artifacts: true
-
-      # --- WEB (Java Spring) ---
-      - name: Download Web Coverage
+      # --- WEB ---
+      - name: Download Web Reports
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
         with:
           github_token: ${{ secrets.GH_PAT }}
           workflow: pr_validation.yml
           repo: ysriser/BinItRightWebApp
-          name: java-coverage-reports
-          path: BinItRightWebApp/target/site/jacoco
-          search_artifacts: true
-
-      - name: Download Web Lint (PMD/CPD)
-        uses: dawidd6/action-download-artifact@v3
-        continue-on-error: true
-        with:
-          github_token: ${{ secrets.GH_PAT }}
-          workflow: pr_validation.yml
-          repo: ysriser/BinItRightWebApp
-          name: java-lint-reports
-          path: BinItRightWebApp/target/
-          search_artifacts: true
-
-      - name: Download Web SAST
-        uses: dawidd6/action-download-artifact@v3
-        continue-on-error: true
-        with:
-          github_token: ${{ secrets.GH_PAT }}
-          workflow: pr_validation.yml
-          repo: ysriser/BinItRightWebApp
-          name: java-sast-results
           path: BinItRightWebApp/
           search_artifacts: true
 
-      - name: Download Web SCA
-        uses: dawidd6/action-download-artifact@v3
-        continue-on-error: true
-        with:
-          github_token: ${{ secrets.GH_PAT }}
-          workflow: pr_validation.yml
-          repo: ysriser/BinItRightWebApp
-          name: java-sca-results
-          path: BinItRightWebApp/target/
-          search_artifacts: true
-
-      - name: Download Web Selenium
-        uses: dawidd6/action-download-artifact@v3
-        continue-on-error: true
-        with:
-          github_token: ${{ secrets.GH_PAT }}
-          workflow: master_deploy.yml
-          repo: ysriser/BinItRightWebApp
-          name: java-selenium-results
-          path: BinItRightWebApp/target/failsafe-reports/
-          search_artifacts: true
-
-      # --- ML (Python) ---
-      - name: Download ML Coverage/Lint
+      # --- ML ---
+      - name: Download ML Reports
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
         with:
           github_token: ${{ secrets.GH_PAT }}
           workflow: pr_validation.yml
           repo: ysriser/BinItRightML
-          name: python-coverage-reports
           path: BinItRightML/
           search_artifacts: true
 
-      - name: Download ML SAST
-        uses: dawidd6/action-download-artifact@v3
-        continue-on-error: true
-        with:
-          github_token: ${{ secrets.GH_PAT }}
-          workflow: pr_validation.yml
-          repo: ysriser/BinItRightML
-          name: python-sast-results
-          path: BinItRightML/
-          search_artifacts: true
-
-      - name: Download ML SCA
-        uses: dawidd6/action-download-artifact@v3
-        continue-on-error: true
-        with:
-          github_token: ${{ secrets.GH_PAT }}
-          workflow: pr_validation.yml
-          repo: ysriser/BinItRightML
-          name: python-sca-results
-          path: BinItRightML/
-          search_artifacts: true
-
-            # ==========================================
-            # PATH CORRECTION & SANITIZATION
-            # ==========================================
+      # ==========================================
+      # PATH CORRECTION
+      # ==========================================
       - name: Fix Report Paths
         run: |
-            echo "Aligning paths and sanitizing Selenium reports..."
+          echo "Aligning paths for SonarCloud..."
 
-            # 1. Java (PMD/CPD)
-            if [ -d "BinItRightWebApp/target" ]; then
-              find BinItRightWebApp/target -name "*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
-            fi
+          # 1. Java (PMD/CPD)
+          if [ -d "BinItRightWebApp/target" ]; then
+            find BinItRightWebApp/target -name "*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
+          fi
 
-            # 2. Python (Ruff/Bandit/Coverage)
-            [ -f "BinItRightML/ruff-report.json" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/ruff-report.json
-            [ -f "BinItRightML/bandit-results.json" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/bandit-results.json
-            [ -f "BinItRightML/coverage.xml" ] && sed -i 's|<source>.*</source>|<source>.</source>|g' "BinItRightML/coverage.xml"
+          # 2. Python (Ruff/Bandit/Coverage)
+          [ -f "BinItRightML/ruff-report.json" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/ruff-report.json
+          [ -f "BinItRightML/bandit-results.json" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightML/bandit-results.json
+          [ -f "BinItRightML/coverage.xml" ] && sed -i 's|<source>.*</source>|<source>.</source>|g' "BinItRightML/coverage.xml"
 
-            # 3. Mobile (Android Lint)
-            [ -f "BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml
+          # 3. Mobile (Android Lint)
+          [ -f "BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml
 
-            # 4. Global SARIF Fix
-            if [ -f "BinItRightMobileApp/results.sarif" ]; then
-              mv BinItRightMobileApp/results.sarif BinItRightMobileApp/android-sast.sarif
-            fi
-            find . -name "*.sarif" -exec sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "|g' {} +
-            
-            [ -d "BinItRightMobileApp" ] && sed -i 's|"uri": "|"uri": "BinItRightMobileApp/|g' BinItRightMobileApp/*.sarif
-            [ -d "BinItRightWebApp" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/*.sarif
-            [ -d "BinItRightML" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/*.sarif
+          # 4. Global SARIF Fix
+          if [ -f "BinItRightMobileApp/results.sarif" ]; then
+            mv BinItRightMobileApp/results.sarif BinItRightMobileApp/android-sast.sarif
+          fi
+          find . -name "*.sarif" -exec sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "|g' {} +
 
-            # 5. Selenium JUnit NUCLEAR SANITIZATION (Python)
-            if [ -d "BinItRightWebApp/target/failsafe-reports" ]; then
-              echo "Surgically escaping Selenium XML artifacts..."
-              python3 -c "
-import os, re
-path = 'BinItRightWebApp/target/failsafe-reports'
-if os.path.exists(path):
-for filename in os.listdir(path):
-  if filename.endswith('.xml'):
-      filepath = os.path.join(path, filename)
-      with open(filepath, 'r') as f:
-          content = f.read()
-      sanitized = re.sub(r'=\"(.*?)\"', lambda m: '=\"' + m.group(1).replace('<', '&lt;').replace('>', '&gt;') + '\"', content)
-      with open(filepath, 'w') as f:
-          f.write(sanitized)
-"
-              # Align paths after content is safe
-              find BinItRightWebApp/target/failsafe-reports -name "TEST-*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
-            fi
+          [ -d "BinItRightMobileApp" ] && sed -i 's|"uri": "|"uri": "BinItRightMobileApp/|g' BinItRightMobileApp/*.sarif
+          [ -d "BinItRightWebApp" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/*.sarif
+          [ -d "BinItRightML" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/*.sarif
 
-            echo "✅ Path alignment and sanitization complete."
+          echo "✅ Path alignment complete."
 
       # ==========================================
       # COMPILE & SCAN
