@@ -4,6 +4,10 @@
 [submodule "BinItRightML"]
 	path = BinItRightML
 	url = https://github.com/ysriser/BinItRightML.git
+	branch = master
 [submodule "BinItRightMobileApp"]
 	path = BinItRightMobileApp
 	url = https://github.com/ysriser/BinItRightMobileApp.git
+	branch = master
+[submodule "BinItRightWebAPP"]
+	branch = master
