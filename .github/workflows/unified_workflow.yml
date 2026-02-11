@@ -99,13 +99,6 @@ jobs:
           path: BinItRightWebApp/target/
           search_artifacts: true
 
-      # Add debug step after download
-      - name: 🔍 Verify Checkstyle Files
-        if: always()
-        run: |
-          echo "Looking for Checkstyle files:"
-          find BinItRightWebApp -name "checkstyle-result.xml" -o -name "checkstyle*.xml"
-
       - name: Download Web SAST
         uses: dawidd6/action-download-artifact@v3
         continue-on-error: true
@@ -126,6 +119,17 @@ jobs:
           repo: ysriser/BinItRightWebApp
           name: java-sca-results
           path: BinItRightWebApp/target/
+          search_artifacts: true
+
+      - name: Download Java DAST Results
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: master_deploy.yml
+          repo: ysriser/BinItRightWebApp
+          name: java-dast-results
+          path: BinItRightWebApp/
           search_artifacts: true
 
       # --- ML (Python) ---
@@ -173,48 +177,83 @@ jobs:
           path: BinItRightML/
           search_artifacts: true
 
-      # ==========================================
-      # PATH CORRECTION
-      # ==========================================
-      - name: Fix Report Paths
-        run: |
-          echo "Aligning paths for SonarCloud..."
+      - name: Download Python DAST
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          workflow: master_deploy.yml
+          repo: ysriser/BinItRightML
+          name: python-dast-results
+          path: BinItRightML/
+          search_artifacts: true
 
-          # 1. Java (Checkstyle)
+      # ==========================================
+      # PATH CORRECTION & DAST CONVERSION
+      # ==========================================
+      - name: Fix Report Paths and Convert DAST
+        run: |
+          echo "🚀 Starting Path Alignment and DAST Conversion..."
+
+          # 1. Define Runner Prefixes (CRITICAL: Define before use)
+          WEB_PREFIX="/home/runner/work/BinItRightWebApp/BinItRightWebApp/"
+          ML_PREFIX="/home/runner/work/BinItRightML/BinItRightML/"
+          MOBILE_PREFIX="/home/runner/work/BinItRightMobileApp/BinItRightMobileApp/"
+
+          # --- 2. Java (Checkstyle, PMD, Selenium) ---
           if [ -d "BinItRightWebApp/target" ]; then
-            find BinItRightWebApp/target -name "*.xml" -exec sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' {} +
+            echo "✅ Aligning Java report paths..."
+            find BinItRightWebApp/target -name "*.xml" -exec sed -i "s|$WEB_PREFIX||g" {} +
           fi
 
-          # --- 2. Python (Ruff/Bandit/Coverage) ---
-          # Define the specific ML prefix
-          ML_PREFIX="/home/runner/work/BinItRightML/BinItRightML/"
-
+          # --- 3. Python (Coverage & Lint) ---
           if [ -f "BinItRightML/coverage.xml" ]; then
             echo "✅ Fixing ML Coverage paths..."
-            # Strip the absolute runner path
             sed -i "s|$ML_PREFIX||g" BinItRightML/coverage.xml
-            # Force the source tag to the current directory relative to the module root
             sed -i 's|<source>.*</source>|<source>.</source>|g' BinItRightML/coverage.xml
           fi
-
           if [ -d "BinItRightML" ]; then
+             echo "✅ Fixing ML JSON report paths..."
              find BinItRightML -name "*.json" -exec sed -i "s|$ML_PREFIX||g" {} +
           fi
 
-          # 3. Mobile (Android Lint)
-          [ -f "BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml" ] && sed -i 's|/home/runner/work/[^/]*/[^/]*/||g' BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml
+          # --- 4. Mobile (Android Lint) ---
+          [ -f "BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml" ] && \
+            sed -i "s|$MOBILE_PREFIX||g" BinItRightMobileApp/app/build/reports/lint-results-localDebug.xml
 
-          # 4. Global SARIF Fix
+          # --- 5. Global SARIF Fix (SAST Results) ---
+          echo "✅ Relativizing SARIF URIs..."
           if [ -f "BinItRightMobileApp/results.sarif" ]; then
             mv BinItRightMobileApp/results.sarif BinItRightMobileApp/android-sast.sarif
           fi
+          # Remove absolute runner paths from all SARIF files
           find . -name "*.sarif" -exec sed -i 's|"uri": "file:///home/runner/work/[^/]*/[^/]*/|"uri": "|g' {} +
 
+          # Prepend module names so SonarCloud finds the code in submodules
           [ -d "BinItRightMobileApp" ] && sed -i 's|"uri": "|"uri": "BinItRightMobileApp/|g' BinItRightMobileApp/*.sarif
           [ -d "BinItRightWebApp" ] && sed -i 's|"uri": "|"uri": "BinItRightWebApp/|g' BinItRightWebApp/*.sarif
           [ -d "BinItRightML" ] && sed -i 's|"uri": "|"uri": "BinItRightML/|g' BinItRightML/*.sarif
 
-          echo "✅ Path alignment complete."
+          # --- 6. DAST Conversion (Java & Python) ---
+          echo "✅ Converting DAST formats..."
+
+          # Java Web App Conversion
+          if [ -f "BinItRightWebApp/ui-report.json" ]; then
+            python3 zap_to_sonar.py BinItRightWebApp/ui-report.json BinItRightWebApp/java-dast-ui.json BinItRightWebApp
+          else
+            echo "⚠️ Java ui-report.json not found. Creating placeholder..."
+            echo '{"issues": []}' > BinItRightWebApp/java-dast-ui.json
+          fi
+
+          # Python ML Conversion (Fixes NoSuchFileException)
+          if [ -f "BinItRightML/report_json.json" ]; then
+            python3 zap_to_sonar.py BinItRightML/report_json.json BinItRightML/python-dast.json BinItRightML
+          else
+            echo "⚠️ Python DAST report not found. Creating placeholder..."
+            echo '{"issues": []}' > BinItRightML/python-dast.json
+          fi
+
+          echo "🎉 All reports aligned and ready for SonarCloud Analysis."
 
       # ==========================================
       # COMPILE & SCAN
@@ -235,4 +274,3 @@ jobs:
             -Dsonar.verbose=true
             -Dsonar.projectKey=ysriser_BinItRightOrchestrator
             -Dsonar.organization=ysriser
-            -Dsonar.java.checkstyle.reportPaths=BinItRightWebApp/target/checkstyle-result.xml
